@@ -1,0 +1,7 @@
+{Issues:
+    1: Create multiple execution => Use multiprocessing  
+    2: Share packets among processes. =>  Queue. Not Tested.
+    3: Share objects among process. => ??
+    4. Stop processes => ??
+    5. Update process data in real-time => ??
+}
