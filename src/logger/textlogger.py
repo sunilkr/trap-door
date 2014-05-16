@@ -1,13 +1,13 @@
 import logger
-from scapy.all import *
+#from scapy.all import *
 
 class TextLogger(Logger):
-'''    
+    '''    
     __format =  "{IP: IP,%IP.src%,%IP.dst%},"+
                 "{TCP: TCP,%TCP.sport,%TCP.dport,%TCP.flags}"+
                 "{UDP: UDP,%UDP.sport,%UDP.dport,-},"+
                 "{Raw: %Raw.size%}"
-'''                
+    '''                
 
     def __init__(self,target, filter=None):
         super(target,filter)

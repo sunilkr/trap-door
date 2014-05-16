@@ -1,4 +1,4 @@
-from .. import filter
+from filter  import Filter
 
 class InputFilter(Filter):
 

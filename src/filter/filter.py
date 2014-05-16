@@ -9,4 +9,6 @@ class Filter:
     '''
     def apply(self,packet):
         return self.__next.apply(packet) if self.__next else True
-
+    
+    def set_next(filter):
+        self.__next = filter
