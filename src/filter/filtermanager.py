@@ -54,10 +54,10 @@ class FilterManager:
             else:
 #                log.syslog(log.DBG, "Got packet : %s" %packet.summary())
                 if self.process(packet):
-                    self.__logger_q.put(packet)
+                    self.__logger_q.put(pkt) # type scapy.packet.Packet throws pickling error
                     print "+",
                 else:
-                    self.__logger_q.put(packet)
+                    self.__logger_q.put(pkt)
                     print "-",
             finally:
                 self.check_comm()

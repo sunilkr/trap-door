@@ -1,14 +1,14 @@
-class Logger:
+class Logger(object):
 
     __filter = None
     __target = None
 
-    def __init__(self,target=None, filter=None):
+    def __init__(self,target=None, out_filter=None):
         self.__target = target
-        self.__filter = filter
+        self.__filter = out_filter
 
-    def set_filter(self,filter):
-        self.__filter = filter
+    def set_filter(self,out_filter):
+        self.__filter = out_filter
 
     def get_filter(self):
         return self.__filter

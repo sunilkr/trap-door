@@ -1,4 +1,5 @@
-import logger
+from logger import Logger
+from scapy.all import *
 #from scapy.all import *
 
 class TextLogger(Logger):
@@ -9,11 +10,13 @@ class TextLogger(Logger):
                 "{Raw: %Raw.size%}"
     '''                
 
-    def __init__(self,target, filter=None):
-        super(target,filter)
+    def __init__(self, target, out_filter=None):
+        super(TextLogger,self).__init__(target, out_filter)
+        self.__target = target
 
     def log(self,packet):
-        self.__target.write(packet.summary()+"\n")
+        pkt = Ether(packet)
+        self.__target.write(pkt.summary()+"\n")
         self.__target.flush()
 #        os.fsync(self.__target.fileno())
 

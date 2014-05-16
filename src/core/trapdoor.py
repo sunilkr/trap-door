@@ -4,7 +4,7 @@ import netlistener
 from util.logging import Log, syslog
 
 from filter.filtermanager import FilterManager
-#from logger.logmanager import LogManager
+from logger.logmanager import LogManager
 
 from time import sleep
 
@@ -26,16 +26,15 @@ class TrapDoor:
     def __init__(self):
         self.filter_queue = mp.Queue()
         self.logger_queue = mp.Queue()    
-#        self.mgr_logger = LogManager()
+        self.mgr_logger = LogManager()
         self.mgr_filter = FilterManager()
-    '''
+    
     def init_loggers(self):
         self.pipe_logger, remote = mp.Pipe() 
-        self.proc_mgr_logger = mp.Process(self.mgr_logger.start, arg=(self.logger_queue,remote))
-   ''' 
+        self.proc_mgr_logger = mp.Process(target=self.mgr_logger.start, args=(self.logger_queue,remote,))
+    
     def init_filters(self):
         self.pipe_filter, remote = mp.Pipe()
-#        self.proc_mgr_filter = mp.Process(target=start_filter, arg=self)
         self.proc_mgr_filter = mp.Process(target=self.mgr_filter.start, 
                 args=(self.filter_queue, self.logger_queue, remote))
     
@@ -49,7 +48,11 @@ class TrapDoor:
         syslog(Log.INFO, "Starting Filter Manager...")
         self.proc_mgr_filter.start()
         syslog(Log.INFO, "FilterManager PID: %d" %self.proc_mgr_filter.pid)
-#        self.proc_mgr_logger.start()
+
+        syslog(Log.INFO, "Staring Logger Manager...")
+        self.proc_mgr_logger.start()
+        syslog(Log.INFO, "Logger Manager PID:%s" %self.proc_mgr_logger.pid)
+
         syslog(Log.INFO, "Starting Listeners...")
         for proc in self.__net_procs:
             proc.start()
