@@ -20,7 +20,7 @@ class LogManager:
         self.__comm = comm
         while not self.__stop:
             try:
-                packet = queue.get(1)
+                packet = self.__logger_q.get(1)
             except Queue.Empty as e:
                 syslog(Log.WARN, "Logger queue is empty")
             else:

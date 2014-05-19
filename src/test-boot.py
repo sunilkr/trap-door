@@ -1,8 +1,9 @@
-#from logger import textlogger
-from filter.ipfilter import IPFilter
+from filter.input.ipfilter import IPFilter
 from core.trapdoor import TrapDoor
 from core.netlistener import NetListener
 from logger.textlogger import TextLogger
+from logger.pcaplogger import PcapLogger
+import pcapy
 
 trapd = None
 
@@ -15,13 +16,16 @@ def init():
 
     netl = NetListener('eth0')
     trapd.add_listener(netl)
+    print "[*] LinkType:%d, IP: %s, MASK: %s" %(netl.getpcap().datalink(), netl.getip(), netl.getmask())
 
-    f_log = open('../logs/packet.log','w')
-    txtlog = TextLogger(f_log)
+    f_log = '../logs/packet.log'
+    txtlog = TextLogger(f_log,'w')
     trapd.init_loggers()
+    caplog = PcapLogger('../logs/test.pcap',dltype=pcapy.DLT_EN10MB)
     trapd.mgr_logger.add_logger("Text",txtlog)
+    trapd.mgr_logger.add_logger("Pcap", caplog)
 
     trapd.start()
-    trapd.stat()
+    trapd.stat(0.5)
 
 init()

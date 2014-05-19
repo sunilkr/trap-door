@@ -1,6 +1,6 @@
-from filter import Filter
-
-#from scapy.all import *
+from filter.filter import Filter
+from scapy.all import *
+from util.logging import Log, syslog
 
 class IPFilter(Filter):
 
@@ -8,16 +8,16 @@ class IPFilter(Filter):
     __dst_ip = None
     __both = False # math src and dst in both direction?
     
-    def __init(self,src = None, dst = None, both = False ,next_filter=None):
-        super(next_filter)
+    def __init__(self,src = None, dst = None, both = False ,_next=None):
+        super(IPFilter,self).__init__(_next)
         self.__src_ip = src
         self.__dst_ip = dst
         self.__both = both
     
-    def apply(self,packet):
+    def execute(self,packet):
         result = False
-
-        if packet.has_layer("IP"):
+        packet = Ether(packet[1])       #[hdr,data]
+        if packet.haslayer("IP"):
             if self.__src_ip and self.__dst_ip:
                 if packet[IP].src == self.__src_ip and packet[IP].dst == self.__dst_ip:
                     result = True
@@ -28,6 +28,5 @@ class IPFilter(Filter):
             elif self.__dst_ip and packet[IP].dst == self.__dst_ip: # Only DST IP
                 result = True
             elif not (self.__src_ip or self.__dst_ip):
-                result = True
-
-        return (result and super.apply(packet))
+                result = True        
+        return (result and super(IPFilter,self).execute(packet))

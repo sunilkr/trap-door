@@ -39,7 +39,6 @@ class TrapDoor:
                 args=(self.filter_queue, self.logger_queue, remote))
     
     def add_listener(self,listener):
-#        listener.set_callback(capture)
         self.__listeners.append(listener)
         proc = mp.Process(target=listener.start, args=(self.filter_queue,))
         self.__net_procs.append(proc)
@@ -51,16 +50,15 @@ class TrapDoor:
 
         syslog(Log.INFO, "Staring Logger Manager...")
         self.proc_mgr_logger.start()
-        syslog(Log.INFO, "Logger Manager PID:%s" %self.proc_mgr_logger.pid)
+        syslog(Log.INFO, "LogManager PID:%s" %self.proc_mgr_logger.pid)
 
         syslog(Log.INFO, "Starting Listeners...")
         for proc in self.__net_procs:
             proc.start()
             syslog(Log.INFO, "Listener PID: %d" % proc.pid)
 
-    def stat(self):
+    def stat(self, delay):
         while True:
             syslog(Log.DBG, "Filter Queue Size %d " %self.filter_queue.qsize())
             syslog(Log.DBG, "Logger Queue Size %d" %self.logger_queue.qsize())
-            sleep(.2)
-
+            sleep(delay)

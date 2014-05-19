@@ -1,14 +1,14 @@
-class Filter:
+class Filter(object):
     __next = None
    
-    def __init__(self,next_filter=None):
-        self.__next = next_filter
+    def __init__(self,_next=None):
+        self.__next = _next
 
     '''
         return result of next filter or True by default
     '''
-    def apply(self,packet):
-        return self.__next.apply(packet) if self.__next else True
+    def execute(self,packet):
+        return self.__next.execute(packet) if self.__next else True
     
-    def set_next(filter):
-        self.__next = filter
+    def set_next(_filter):
+        self.__next = _filter
