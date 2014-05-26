@@ -6,12 +6,12 @@ class Log:
 
 def syslog(lvl,msg):
     if lvl == Log.DBG:
-        print("[?] %s" %msg)
+        print("[?] {0}".format(msg))
     elif lvl == Log.INFO:
-        print("[*] %s" %msg)
+        print("[*] {0}".format(msg))
     elif lvl == Log.ERR:
-        print("[X] %s" %msg)
+        print("[X] {0}".format(msg))
     elif lvl == Log.WARN:
-        print("[!] %s" %msg)
+        print("[!] {0}".format(msg))
     else:
-        print("[%] %s" %msg) 
+        print("[%] {0}".format(msg))

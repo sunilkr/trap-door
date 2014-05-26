@@ -1,33 +1,42 @@
-from filter import Filter
+from filter.abstractfilter import AbstractFilter
+from scapy.all import *
+from util.logging import Log, syslog
+from util.datatypes import to_bool 
 
-#from scapy.all import *
+class IPFilter(AbstractFilter):
 
-class IPFilter(Filter):
-
-    __src_ip = None
-    __dst_ip = None
-    __both = False # math src and dst in both direction?
+    def __init__(self,name=None, src=None, dst=None, both=False ,_next=None):
+        self.src = src
+        self.dst = dst
+        self.both = both
+        super(IPFilter,self).__init__(name,_next)
     
-    def __init(self,src = None, dst = None, both = False ,next_filter=None):
-        super(next_filter)
-        self.__src_ip = src
-        self.__dst_ip = dst
-        self.__both = both
-    
-    def apply(self,packet):
-        result = False
+    def __setattr__(self,name,value):
+        if name == 'both':
+            super(IPFilter,self).__setattr__(name, to_bool(value))
+        else:
+            super(IPFilter,self).__setattr__(name,value)
 
-        if packet.has_layer("IP"):
-            if self.__src_ip and self.__dst_ip:
-                if packet[IP].src == self.__src_ip and packet[IP].dst == self.__dst_ip:
-                    result = True
-                elif self.__both and packet[IP].dst == self.__src_ip and packet[IP].src == self.__dst_ip:
-                    result = True
-            elif self.__src_ip and packet[IP].src == self.__src_ip: # Only SRC IP
-                result = True
-            elif self.__dst_ip and packet[IP].dst == self.__dst_ip: # Only DST IP
-                result = True
-            elif not (self.__src_ip or self.__dst_ip):
-                result = True
+    def execute(self,packet):
+        result = 0
+        packet = Ether(packet[1])       #[hdr,data]
+        if packet.haslayer("IP"):
+            if self.src:
+                if self.src == packet[IP].src or (self.both and self.src == packet[IP].dst):
+                    result +=1
+            else:
+                result +=1
 
-        return (result and super.apply(packet))
+            if self.dst:
+                if self.dst == packet[IP].dst or (self.both and self.dst == packet[IP].src):
+                    result +=1
+            else:
+                result +=1
+
+        if (result > 1) and super(IPFilter,self).execute(packet) :
+            return True
+        else:
+            return False
+
+    def attribs(self):
+        return "name:%s, src:%s, dst:%s, both:%s" %(self.name,self.src,self.dst,self.both)
