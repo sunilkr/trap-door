@@ -1,3 +1,4 @@
+import struct
 
 CMD_STOP    = 1
 CMD_ADD     = 2
@@ -28,6 +29,15 @@ def to_bool(value):
     return bool(value)
 
 def ip4_to_bytes(ip):
-    arr = [int(x) for x in ip.split(".")]
-    return str(bytearray(arr))
+    if ip is not None:
+        arr = [int(x) for x in ip.split(".")]
+        return str(bytearray(arr))
+    else:
+        return None
+
+def bytes_to_ip4(value):
+    if value is not None:
+        return ".".join(str(x) for x in struct.unpack("BBBB",value))    
+    else:
+        return None
 
