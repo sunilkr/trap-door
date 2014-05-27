@@ -1,15 +1,17 @@
+## STDLIB imports
 import multiprocessing as mp
 from threading import Thread
 from time import sleep, time, strftime, localtime
 import re
 import sys
 import socket
+
+## Package Imports
 from netlistener import NetListener
 from util.logging import Log, syslog
 import util.datatypes as dt
 from filter.filtermanager import FilterManager
 from logger.logmanager import LogManager
-from filter.ipfilter import IPFilter
 
 class TrapDoor:
     
@@ -45,12 +47,16 @@ class TrapDoor:
         self.filtermgr['proc'] = mp.Process(target=self.filtermgr['obj'].start, 
                 args=(self.filtermgr['queue'], self.loggermgr['queue'], remote))
     
-    def add_listener(self,listener):
+    def _add_listener(self,listener,start=False):
         local,remote = mp.Pipe()
         self.pipe_net.append(local)
         self.listeners.append(listener)
         proc = mp.Process(target=listener.start, args=(self.filtermgr['queue'],remote))
         self.net_procs.append(proc)
+        if start:
+            proc.start()
+            syslog(Log.INFO, "Listener for {0} started. PID: {1}".format(
+                listener.getip(), proc.pid))
 
     def start(self):
         syslog(Log.INFO, "Starting Filter Manager...")
@@ -63,15 +69,17 @@ class TrapDoor:
 
         syslog(Log.INFO, "Starting Listeners...")
         for proc in self.net_procs:
-            proc.start()
+            if not proc.is_alive():
+                proc.start()
             syslog(Log.INFO, "Listener PID: {0}".format(proc.pid))
 
         syslog(Log.INFO, "Starting DNS Manager...")
         self.dnsmanager.set_comm(self.filtermgr['comm'])
         self.dnsmanager.deamon = True
         self.dnsmanager.start()
+        self.__running = True
 
-    def stat(self, delay):
+    def stat(self, delay=2):
         try:
             while True:
                 syslog(Log.DBG, "Filter Queue Size {0}".format(self.filtermgr['queue'].qsize()))
@@ -100,8 +108,10 @@ class TrapDoor:
         self.loggermgr['comm'].send([dt.CMD_STOP,None])
         self.loggermgr['proc'].join()
         self.loggermgr['comm'].close()
+        self.__running = False
 
         syslog(Log.INFO, "DONE")
+        
         
     def add_ipfilter(self, config):
         self.filtermgr['comm'].send([dt.CMD_ADD, config])
@@ -120,9 +130,10 @@ class TrapDoor:
         self.loggermgr['comm'].send([dt.CMD_ADD, config])
         syslog(Log.INFO,self.loggermgr['comm'].recv())
 
-    def add_iface(iface):
+    def add_iface(self,iface):
         netl = NetListener(iface)
-        self.add_listener(netl)
+        self._add_listener(netl, start=True)
+        syslog(Log.INFO, "Added listener on {0}".format(netl.getip()))
         
 
 class DNSUpdater(Thread):

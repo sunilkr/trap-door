@@ -1,50 +1,32 @@
-import ConfigParser
+from core.trapdoor import TrapDoor
+from util.cfgparser import CfgParser
 
-from core import trapdoor,netlistener
-from filter import filtermanager
-from logger import loggermanager
+CNF = 'config/config.cfg'
 
 def main():
-    global config
-    global trapd
-
-    config = load_config('config/config.cfg')
-
-    try:
-        # Create trapdoor object
-        tdopts = config['trapdoor']
-        trapd = TrapDoor()
-        ifaces = tdopts['ifaces']
-        for ifs in ifaces:
-            netl = NetListener(iface=ifs)
-            trapd.add_listener(netl)
-        
-        # Create filter chains
-        for filter in tdopts['filters']:
-            trapd.add_filter(create_filter(filter))
-        
-        # Create loggers
-        for cfg_logger in tdopts['loggers']:
-            trapd.add_logger(create_logger(cfg_logger))
+    config = CfgParser().parse(CNF) 
+    cfg = config['trapdoor']
+    
+    print "Createing and staring TrapDoor..."
+    trapd = TrapDoor()
+    trapd.start()
+    
+    print "Adding interfaces..."
+    for iface in cfg['iface']:
+        trapd.add_iface(iface)
 
 
-    except e as Exception:
-        raise e
+    print "Adding filters..."
+    for _filter in cfg['filters']:
+        trapd.add_filter(_filter)
 
-'''
- input: 'filter' => (Filter config chained with next)
- output: chain of 'filter' objects
-'''
-def create_filter(cfg_filter)
-    filter = get_object(cfg_filter['class'], cfg_filter['options'])
-    if cfg_filter["next"] is not None:
-        cfg_filter = cfg_filter["next"]
-        filter.set_next(create_filter(cfg_filter))
+    print "Adding Loggers..."
+    for logger in cfg['loggers']:
+        trapd.add_logger(logger)
 
-    return fltr
+    print "Started Monitoring..."
+    trapd.stat(5)
+    
 
-'''
-'''
-def create_logger(cfg_logger):
-    logger = get_object(cfg_logger['class'], cfg_logger['options'])
-
+if __name__ == "__main__":
+    main()
