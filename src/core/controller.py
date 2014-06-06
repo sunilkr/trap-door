@@ -7,31 +7,31 @@ import sys
 import socket
 
 ## Package Imports
-from netlistener import NetListener
+from .netlistener import NetListener
 from util.logging import Log, syslog
 import util.datatypes as dt
-from filter.filtermanager import FilterManager
-from logger.logmanager import LogManager
+from .filtermanager import FilterManager
+from .logmanager import LogManager
 
-class TrapDoor:
+class Controller(object):
     
-    listeners = []
-    net_procs = []
     instance = None
-    dns_table = {}
 
     def __init__(self):
+        self.listeners = []
+        self.net_procs = []
+        self.pipe_net  = []
         self.loggermgr = {}
         self.loggermgr['queue'] = mp.Queue()    
-        self.loggermgr['obj'] = LogManager()
+        self.loggermgr['obj']   = LogManager()
         self._init_loggers()
 
         self.filtermgr = {}
         self.filtermgr['queue'] = mp.Queue()
-        self.filtermgr['obj'] = FilterManager()
+        self.filtermgr['obj']   = FilterManager()
         self._init_filters()
 
-        self.pipe_net = []
+        self.dns_table  = {}
         self.dnsmanager = DNSUpdater(self.dns_table)
         
     def _init_loggers(self):
@@ -87,6 +87,12 @@ class TrapDoor:
                 sleep(delay)
         except KeyboardInterrupt, e:
             self.finish()
+    
+    def status(self,dns=True):
+        status={'filterq':{'size':self.filtermgr['queue'].qsize()},
+                'loggerq':{'size':self.loggermgr['queue'].qsize()},
+                'dnstable': self.dnsmanager.entries()}
+        return status 
 
     def finish(self):
         syslog(Log.INFO,"Stopping DNS Manager...")
@@ -115,7 +121,9 @@ class TrapDoor:
         
     def add_ipfilter(self, config):
         self.filtermgr['comm'].send([dt.CMD_ADD, config])
-        syslog(Log.INFO,self.filtermgr['comm'].recv())
+        result = self.filtermgr['comm'].recv()
+        syslog(Log.INFO,result)
+        return result
 
     def add_filter(self,config):
         if config.has_key('src'):
@@ -124,17 +132,25 @@ class TrapDoor:
             config['dst'] = self.dnsmanager.add_target(config['dst'],config['name'],'dst')
         
         self.filtermgr['comm'].send([dt.CMD_ADD, config])
-        syslog(Log.INFO, self.filtermgr['comm'].recv())
+        result = self.filtermgr['comm'].recv()
+        syslog(Log.INFO, result)
+        return result
 
     def add_logger(self, config):
         self.loggermgr['comm'].send([dt.CMD_ADD, config])
-        syslog(Log.INFO,self.loggermgr['comm'].recv())
+        result = self.loggermgr['comm'].recv()
+        syslog(Log.INFO,result)
+        return result
 
     def add_iface(self,iface):
         netl = NetListener(iface)
         self._add_listener(netl, start=True)
         syslog(Log.INFO, "Added listener on {0}".format(netl.getip()))
-        
+       
+    def new_chain(self,config):
+        self.filtermgr['comm'].send([dt.CMD_ADD_CHAIN, config])
+        result = self.filtermgr['comm'].recv()
+        syslog(Log.INFO, result)
 
 class DNSUpdater(Thread):
     def __init__(self,table,comm=None, wait=1):
@@ -208,7 +224,10 @@ class DNSUpdater(Thread):
                 name,ip))
             self.log.flush()
         except:
-            syslog(Log.WARN, "DNSUpdater::Failed to log DNS")
-        
+            syslog(Log.WARN, "DNSUpdater::Failed to log DNS")    
             
-
+    def entries(self):
+        entries = {}
+        for name,data in self.table.items():
+            entries[name] = data[0]
+        return entries

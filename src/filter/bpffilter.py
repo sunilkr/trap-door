@@ -1,5 +1,7 @@
 import pcapy
 
+from filter.abstractfilter import AbstractFilter
+
 class BPFFilter(AbstractFilter):
 
     def __init__(self, name=None, expr=None, _next=None):
@@ -22,3 +24,9 @@ class BPFFilter(AbstractFilter):
             
     def attribs(self):
         return "name:{0}, expression:{1}".format(self.name, self.expression)
+
+    def attrs(self):
+        return {'name':self.name,
+                'expression': self.expression,
+                'next':self.nxt
+                }

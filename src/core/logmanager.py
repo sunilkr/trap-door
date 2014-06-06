@@ -6,7 +6,7 @@ import traceback
 from multiprocessing import current_process
 import signal
 
-class LogManager:
+class LogManager(object):
 
     def __init__(self):
         self.__logger_q = None

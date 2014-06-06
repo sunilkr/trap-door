@@ -44,3 +44,11 @@ class IPFilter(AbstractFilter):
     def attribs(self):
         return "name:%s, src:%s, dst:%s, both:%s" %(self.name,
                 bytes_to_ip4(self.src), bytes_to_ip4(self.dst), self.both)
+
+    def attrs(self):
+        return {'name'  : self.name,
+                'src'   : bytes_to_ip4(self.src),
+                'dst'   : bytes_to_ip4(self.dst),
+                'both'  : self.both,
+                'next'  : str(self.nxt)
+                }
