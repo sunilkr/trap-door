@@ -1,5 +1,5 @@
 from unittest import TestSuite, TextTestRunner, TestLoader
-from test.factory import FactoryTest
+from tests.util.factory import FactoryTest
 
 loader = TestLoader()
 suite = loader.loadTestsFromTestCase(FactoryTest)

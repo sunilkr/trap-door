@@ -96,26 +96,32 @@ class FilterManager(object):
 
     def _add(self,config):
         parent = config['parent'] if config.has_key('parent') else None
-        name = config['name']
+        name = config['name'] if config.has_key('name') else return [dt.NO_SUCH_ITEM,
+                "'name' is required attrubute"]
 
         if self.filters.has_key(name):
             return [dt.ERR_CONFLICT, 'Filter "{0}" already added'.format(name)]
         if parent is None:
             return [dt.ERR_NO_SUCH_ITEM, "Parent is required to add filter:{0}".format(name)]
         elif not self.filters.has_key(parent):
-            return [dt.ERR_NO_SUCH_ITEM, "Invalid parent:{0}".format(parent)]
+            return [dt.ERR_NO_SUCH_ITEM, 
+                    "Invalid parent:{0}. Try adding a new chain.".format(parent)]
         else:
             parent = self.filters['parent']
             
         try:
             _filter = create_object(config['class'])
+            _filter = apply_attrs(_filter,config)
         except:
-            return [dt.ERR_SEE_LOG,'Error while creating filter {0}. See logs.'.format(config['class'])]
+            return [dt.ERR_SEE_LOG,
+                    'Error while creating filter {0}. See logs.'.format(config['class'])]
         else:
-            tail = parent.nxt
-            
-
-            
+            tail = parent.nxt   #TODO: Append the tail to new filter if required
+            parent.set_next(_filter)
+            if tail == None:
+                return [dt.STATUS_OK, "Filter added with no tail."]
+            else:
+                return [dt.STATUS_OK, "Filter added, tail removed ({0}).".format(tail.name)]
 
 
     def _update_filter(self,config):
@@ -129,23 +135,44 @@ class FilterManager(object):
                 self.filters[name] = apply_attrs(_filter,config)
             except:
                 syslog(Log.ERR, traceback.format_exc())
-                return [dt.ERR_APPLY_ATTR, "Error while applying attributes to '{0}' type {1}".format(name, _filter.__class__.__name__)]
+                return [dt.ERR_APPLY_ATTR, 
+                        "Error while applying attributes to '{0}' type {1}".format(name, 
+                            _filter.__class__.__name__)]
             else:
                 return [dt.STATUS_OK,"Filter {0} updated".format(name)]
 
     def __delete(self,config):
         if self.__filters.has_key(config['name']):
+            self._delete_from_chains(config['name'])
             del self.filters[config['name']]
             return [dt.STATUS_OK,"Filter {0} deleted".format(name)]
         else:
             return [dt.ERR_NO_SUCH_ITEM,"No such filter: {0}".format(name)]
            
-    
+    def _delete_from_chains(self,name):
+        for chain in self.chains:
+            if chain.name == name:
+                self.chains.remove(chain)
+                syslog(Log.INFO, "Removed chain with root:{0}".format(chain.name))
+                return True
+            else:
+                done = False
+                nxt = chain.nxt
+                while nxt is not None:
+                    if nxt.name == name:
+                        chain.set_next(None)
+                        syslog(Log.INFO, "Removed from chain. Parent:{0}".format(chain.name))
+                        done = True
+                        break
+                    else:
+                        chain = nxt
+                        nxt = nxt.nxt
+                if done:
+                    return True
+        return False
+
     def _new_chain(self,config):
         _filter = create_chain(config)
-        else:
-            self.chains.append(_filter)
-
         while _filter is not None:
             name = _filter.name
             if self.add_filter(name, _filter):      # FIXME: Can add non filter types
@@ -154,8 +181,8 @@ class FilterManager(object):
                 syslog(Log.ERR, "Filter {0} already exists".format(name))
                 return [dt.ERR_CONFLICT, "Filter {0} already exists".format(name)]
 
+        self.chains.append(_filter)
         return [dt.STATUS_OK, "Filter chain added successfully"]
-
 
 
     def check_comm(self):
