@@ -1,6 +1,6 @@
 from util.logging import Log, syslog
 import util.datatypes as dt
-from util.factory import create_object, apply_attrs
+from util.factory import create_object, apply_attrs, create_chain
 import Queue
 import traceback
 from multiprocessing import current_process
@@ -10,15 +10,15 @@ class LogManager(object):
 
     def __init__(self):
         self.__logger_q = None
-        self.__loggers = {}
+        self.loggers = {}
         self.__stop = False
 
     def add_logger(self,name,logger):
-        if self.__loggers.get(name) is None:
-            self.__loggers[name] = logger
+        if self.loggers.get(name) is None:
+            self.loggers[name] = logger
 
     def update_logger(self,name,logger):
-        self.__loggers[name] = logger
+        self.loggers[name] = logger
 
     def start(self,queue,comm):
         self.__logger_q = queue
@@ -43,7 +43,7 @@ class LogManager(object):
                 syslog(Log.ERR, traceback.format_exc())
                 raise e
             else:
-                for logger in self.__loggers.values(): 
+                for logger in self.loggers.values(): 
                     logger.log(packet)
             finally:
                 self.check_comm()
@@ -57,40 +57,67 @@ class LogManager(object):
                 self.__stop = True
 
             elif cmd == dt.CMD_ADD:
-                self.comm.send(self.__add(data))
+                self.comm.send(self._add(data))
 
             elif cmd == dt.CMD_UPDATE:
-                self.comm.send(self.__update(data))
+                self.comm.send(self._update(data))
 
             elif cmd == dt.CMD_DELETE:
-                self.comm.send(self.__delete(data))
+                self.comm.send(self._delete(data))
 
-    def __add(self, config):
-        name = config['name']
-        if self.__loggers.has_key(name):
+    def _add(self, config):
+        if config.has_key('name'):
+            name = config['name']
+        else:
+            return [dt.ERR_NO_SUCH_ITEM, "'name' is required"]
+
+        if self.loggers.has_key(name):
             return [dt.ERR_CONFLICT,"Logger {0} already exists".format(name)]
         else:
             logr = create_object(config['class'])
             logr = apply_attrs(logr,config)
-            self.__loggers[name] = logr
+            if config.has_key('filter'):
+                _filter = create_chain(config['filter'])
+                logr.set_filter(_filter)
+            self.loggers[name] = logr
             return [dt.STATUS_OK, "Logger {0} added".format(name)]
 
-    def __update(self, config):
+    def _update(self, config):
         name = config['name']
         try:
-            logger = self.__loggers[name]
+            logger = self.loggers[name]
         except KeyError:
             return [dt.ERR_NO_SUCH_ITEM,'No such logger: {0}'.format(name)]
         else:
-            self.__loggers[name] = apply_attrs(logger,config)
+            self.loggers[name] = apply_attrs(logger,config)
             return [dt.STATUS_OK,"Logger {0} updated".format(name)]
 
-    def __delete(self, config):
+    def _delete(self, config):
         name = config['name']
-        if self.__loggers.has_key(name):
-            del self.__loggers[name]
+        if self.loggers.has_key(name):
+            del self.loggers[name]
             return [dt.STATUS_OK, "Logger {0} deleted".format(name)]
         else:
             return [t.NO_SUCH_ITEM, "No such logger: {0}".format(name)]
+
+    def _set_filter(self,config):
+        if config.has_key('name'):
+            name = config['name']
+        else:
+            return [dt.ERR_NO_SUCH_ITEM, "'name' is required"]
+
+        if self.loggers.has_key(name):
+            logger = self.loggers[name]
+        else:
+            return [dt.ERR_NO_SUCH_ITEM, "No such logger:{0} ".format(name)]
+
+        if config.has_key('filter'):
+            _filter = create_chain(config['filter'])
+        else:
+            return [dt.ERR_NO_SUCH_ITEM, "'filter' is required"]
+        
+        logger.set_filter(_filter)
+        syslog(Log.INFO, "Filter:{0} added to logger:{1}".format(_filter.name, name))
+        return [dt.STATUS_OK, "Filter:{0} added to logger:{1}".format(_filter.name,name)]
 
 

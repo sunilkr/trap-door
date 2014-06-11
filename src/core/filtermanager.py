@@ -63,41 +63,14 @@ class FilterManager(object):
                 if self._process(packet):      
                     self.__logger_q.put(packet) 
             finally:
-                self.check_comm()
-    
-    def __add(self,config):
-        name = config['name']
-        parent = config['parent'] if config.has_key('parent') else None
-        if parent:
-            if self.filters.has_key(parent):
-                tail = self.filters[parent].nxt
-                self.filters[parent].set_next(_filter)
-                if not (config.has_key('no-tail') and config['no-tail'] == True):
-                    _filter.set_next(tail)
-            else:
-                syslog(Log.ERR, "Filter {0} not fount".format(parent))
-                return [dt.ERR_NO_SUCH_ITEM, "Parent Filter {0} not fount".format(parent)]
-        try:
-            _filter = self.filters[name]
-        except KeyError:
-
-            try:
-                _filter = create_object(config['class'])
-            except:
-                syslog(Log.ERR, traceback.format_exc())
-                return [dt.ERR_CREATE_OBJECT, "Error while creating object:{0}".format(config['class'])]
-            else:
-                _filter = apply_attrs(_filter,config)
-                self.filters[name]=_filter
-                return [dt.STATUS_OK,"Filter {0} added".format(name)]
-        else:
-            return [dt.ERR_CONFLICT,"Filter {0} already exists".format(name)]
-
+                self.check_comm() 
 
     def _add(self,config):
         parent = config['parent'] if config.has_key('parent') else None
-        name = config['name'] if config.has_key('name') else return [dt.NO_SUCH_ITEM,
-                "'name' is required attrubute"]
+        if config.has_key('name') :
+            name = config['name'] 
+        else: 
+            return [dt.NO_SUCH_ITEM,"'name' is required attrubute"]
 
         if self.filters.has_key(name):
             return [dt.ERR_CONFLICT, 'Filter "{0}" already added'.format(name)]
@@ -107,7 +80,7 @@ class FilterManager(object):
             return [dt.ERR_NO_SUCH_ITEM, 
                     "Invalid parent:{0}. Try adding a new chain.".format(parent)]
         else:
-            parent = self.filters['parent']
+            parent = self.filters[parent]
             
         try:
             _filter = create_object(config['class'])
@@ -118,13 +91,14 @@ class FilterManager(object):
         else:
             tail = parent.nxt   #TODO: Append the tail to new filter if required
             parent.set_next(_filter)
+            self.filters[_filter.name] = _filter
             if tail == None:
                 return [dt.STATUS_OK, "Filter added with no tail."]
             else:
                 return [dt.STATUS_OK, "Filter added, tail removed ({0}).".format(tail.name)]
 
 
-    def _update_filter(self,config):
+    def _update(self,config):
         name = config['name']
         try:
             _filter = self.filters[config['name']]
@@ -141,49 +115,60 @@ class FilterManager(object):
             else:
                 return [dt.STATUS_OK,"Filter {0} updated".format(name)]
 
-    def __delete(self,config):
-        if self.__filters.has_key(config['name']):
-            self._delete_from_chains(config['name'])
-            del self.filters[config['name']]
+    def _delete(self,config):
+        name = config['name']
+        if self.filters.has_key(name):
+            for chain in self.chains:       #TODO: Can do better than this
+                done = False
+                if chain.name == name:
+                    self.chains.remove(chain)
+                    self._remove_tail(chain)
+                    return [dt.STATUS_OK, 'Remove filter chain with root:{0}'.format(name)]
+                else:
+                    node = chain
+                    parent = node
+                    while node is not None:
+                        if node.name == name:
+                            self._remove_tail(node)
+                            parent.set_next(None)
+                            done = True
+                            break
+                        else:
+                            parent = node
+                            node = node.nxt
+
+                if done:
+                    break
+
             return [dt.STATUS_OK,"Filter {0} deleted".format(name)]
         else:
             return [dt.ERR_NO_SUCH_ITEM,"No such filter: {0}".format(name)]
            
-    def _delete_from_chains(self,name):
-        for chain in self.chains:
-            if chain.name == name:
-                self.chains.remove(chain)
-                syslog(Log.INFO, "Removed chain with root:{0}".format(chain.name))
-                return True
-            else:
-                done = False
-                nxt = chain.nxt
-                while nxt is not None:
-                    if nxt.name == name:
-                        chain.set_next(None)
-                        syslog(Log.INFO, "Removed from chain. Parent:{0}".format(chain.name))
-                        done = True
-                        break
-                    else:
-                        chain = nxt
-                        nxt = nxt.nxt
-                if done:
-                    return True
-        return False
+    def _remove_tail(self,node):
+        if node.nxt is not None:
+            self._remove_tail(node.nxt)
+        del self.filters[node.name]
+        
 
     def _new_chain(self,config):
         _filter = create_chain(config)
+        self.chains.append(_filter)
         while _filter is not None:
             name = _filter.name
             if self.add_filter(name, _filter):      # FIXME: Can add non filter types
                 _filter = _filter.nxt
             else:
-                syslog(Log.ERR, "Filter {0} already exists".format(name))
+                syslog(Log.ERR, "Filter {0} already exists. Rolling Back".format(name))
+            
+                _filter = self.chains.pop(-1)
+                while _filter is not None:
+                    if _filter in self.filters.values():
+                        del self.filters[_filter.name]
+                    _filter = _filter.nxt
+
                 return [dt.ERR_CONFLICT, "Filter {0} already exists".format(name)]
 
-        self.chains.append(_filter)
         return [dt.STATUS_OK, "Filter chain added successfully"]
-
 
     def check_comm(self):
         if self.__comm.poll():
@@ -194,13 +179,13 @@ class FilterManager(object):
                 syslog(Log.INFO, "FilterManager({0})::STOP:: Clearing queue...".format(self.pid))
 
             elif cmd == dt.CMD_UPDATE:
-                self.__comm.send(self.__update_filter(data))
+                self.__comm.send(self._update(data))
 
             elif cmd == dt.CMD_ADD:
-                self.__comm.send(self.__add(data))
+                self.__comm.send(self._add(data))
 
             elif cmd == dt.CMD_DELETE:
-                self.__comm.send(self.__delete(data))
+                self.__comm.send(self._delete(data))
 
             elif cmd == dt.CMD_FILTER_ADD_CHAIN:
                 self.__comm.send(self._new_chain(data))
