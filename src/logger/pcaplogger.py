@@ -41,4 +41,6 @@ class PcapLogger(Logger):
             self.__dumper.file.flush()
 
     def close(self):
-        self.__dumper.close()
+        if self.__dumper is not None:
+            self.__dumper.close()
+            self.__dumper = None
