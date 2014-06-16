@@ -70,8 +70,8 @@ class FactoryTest(unittest.TestCase):
 
         self.assertEqual(child.__class__.__name__, 'TCPFilter')
         self.assertEqual(child.name, 'TCPFilter.HTTP/S')
-        self.assertEqual(child.sport, '\x00P')
-        self.assertEqual(child.dport, '\x005')
+        self.assertEqual(child.sport, 80)
+        self.assertEqual(child.dport, 53)
         self.assertEqual(child.nxt, None)
 
 

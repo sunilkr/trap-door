@@ -2,6 +2,7 @@ import unittest
 from unittest import TestSuite, TextTestRunner, TestLoader
 
 from tests.util.factory import FactoryTest
+from tests.util.datatypes import DataTypesTest
 from tests.core.filtermanager import FilterManagerTest
 from tests.core.logmanager import LogManagerTest
 from tests.core.controller import ControllerTest
@@ -11,7 +12,8 @@ from tests.logger.pcaplogger import PcapLoggerTest
 from tests.logger.textlogger import TextLoggerTest
 
 loader = unittest.defaultTestLoader
-suite = loader.loadTestsFromTestCase(FactoryTest)
+suite = loader.loadTestsFromTestCase(DataTypesTest)
+suite.addTest(loader.loadTestsFromTestCase(FactoryTest))
 suite.addTest(loader.loadTestsFromTestCase(FilterManagerTest))
 suite.addTest(loader.loadTestsFromTestCase(LogManagerTest))
 suite.addTest(loader.loadTestsFromTestCase(ControllerTest))

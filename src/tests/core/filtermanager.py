@@ -103,7 +103,7 @@ class FilterManagerTest(unittest.TestCase):
         
         child = self.fm.filters['TCPFilter.CHILD2']
 
-        self.assertEqual(child.sport,'\x00P')
+        self.assertEqual(child.sport,80)
         self.assertFalse(child.both)
 
     def test_update(self):

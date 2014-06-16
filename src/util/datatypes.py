@@ -19,6 +19,14 @@ ERR_CREATE_OBJECT   = -4
 ERR_APPLY_ATTRS     = -5
 ERR_SEE_LOG         = -100
 
+TCP_FLAGS = {
+        'FIN':1,
+        'SYN':2,
+        'RST':4,
+        'PSH':8,
+        'ACK':16,
+        'URG':32
+        }
 
 def to_bool(value):
     """
@@ -33,7 +41,7 @@ def to_bool(value):
             return True
         if value.lower() in ("no",  "n", "false", "f", "0", ""):
             return False
-        raise Exception('Invalid value for boolean conversion: ' + value)
+        raise ValueError, 'Invalid value for boolean conversion:{0}'.format(value)
     return bool(value)
 
 def ip4_to_bytes(ip):
@@ -49,3 +57,19 @@ def bytes_to_ip4(value):
     else:
         return None
 
+def tcp_flags_to_value(flags):
+    if flags is None or flags == 'None':
+        return None
+
+    flag = 0
+    for f in flags:
+        flag = flag | TCP_FLAGS[f]
+
+    return flag
+
+def value_to_tcp_flags(value):
+    flags = []
+    for f,v in TCP_FLAGS.items():
+        if (value & v) != 0:
+            flags.append(f)
+    return flags

@@ -99,6 +99,6 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(_filter.src,'\x7f\x00\x00\x01')
         self.assertEqual(_filter.__class__.__name__, 'IPFilter')
         self.assertEqual(_filter.nxt.__class__.__name__, 'TCPFilter')
-        self.assertEqual(_filter.nxt.sport, '\x00P')
+        self.assertEqual(_filter.nxt.sport, 80)
 
 

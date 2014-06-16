@@ -12,3 +12,8 @@ class AbstractFilter(object):
     
     def set_next(self,_filter):
         self.nxt = _filter
+
+    def __setattr__(self,name,value):
+        if value == 'None':     # Explicitely set value to None
+            value = None
+        super(AbstractFilter,self).__setattr__(name,value)
