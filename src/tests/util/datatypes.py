@@ -27,3 +27,21 @@ class DataTypesTest(unittest.TestCase):
         flags = set(['ACK','FIN','RST','URG','SYN','PSH'])
         self.assertEqual(len(flags - set(value_to_tcp_flags(63))), 0)
 
+    def test_bytes_to_mac(self):
+        value = '\x00\x90\xfb8\xb5H'
+        self.assertEqual(bytes_to_mac(value), '00:90:fb:38:b5:48')
+
+    def test_mac_to_bytes(self):
+        mac = 'b8:ca:3a:83:73:6a'
+        self.assertEqual(mac_to_bytes(mac), '\xb8\xca:\x83sj')
+
+    def test_l3_proto_name(self):
+        self.assertEqual(l3_proto_name(2048), "IP")
+        self.assertEqual(l3_proto_name(0x1000), "INVALID")
+
+    def test_l4_proto_name(self):
+        self.assertEqual(l4_proto_name(6), 'TCP')
+        self.assertEqual(l4_proto_name(150), "RESERVED")
+
+if __name__ == "__main__":
+    unittest.main()
