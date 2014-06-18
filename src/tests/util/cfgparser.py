@@ -9,7 +9,6 @@ class CfgParserTest(unittest.TestCase):
 
     def test_parse(self):
         config = self.parser.parse('config/config-test.cfg')
-        self.parser.pprint()
         self.assertEqual(len(config), 1)
         self.assertTrue(config.has_key('trapdoor'))
 
