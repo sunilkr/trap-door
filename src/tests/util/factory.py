@@ -75,3 +75,7 @@ class FactoryTest(unittest.TestCase):
         self.assertEqual(child.nxt, None)
 
 
+
+if __name__ == "__main__":
+    unittest.main()
+

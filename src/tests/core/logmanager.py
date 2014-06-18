@@ -102,3 +102,6 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(_filter.nxt.sport, 80)
 
 
+
+if __name__ == "__main__":
+    unittest.main()

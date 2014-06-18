@@ -32,3 +32,7 @@ class PcapLoggerTest(unittest.TestCase):
         
     def tearDown(self):
         self.logger.close()
+
+
+if __name__ == "__main__":
+    unittest.main()

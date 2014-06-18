@@ -56,3 +56,7 @@ class IPFilterTest(unittest.TestCase):
 
         setattr(self._filter,'src','127.0.0.1')
         self.assertEqual(self._filter.src, '\x7f\x00\x00\x01')
+
+
+if __name__ == "__main__":
+    unittest.main()

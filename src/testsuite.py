@@ -1,6 +1,7 @@
 import unittest
 from unittest import TestSuite, TextTestRunner, TestLoader
 
+from tests.util.cfgparser import CfgParserTest
 from tests.util.factory import FactoryTest
 from tests.util.datatypes import DataTypesTest
 from tests.core.filtermanager import FilterManagerTest
@@ -13,6 +14,7 @@ from tests.logger.textlogger import TextLoggerTest
 
 loader = unittest.defaultTestLoader
 suite = loader.loadTestsFromTestCase(DataTypesTest)
+suite.addTest(loader.loadTestsFromTestCase(CfgParserTest))
 suite.addTest(loader.loadTestsFromTestCase(FactoryTest))
 suite.addTest(loader.loadTestsFromTestCase(FilterManagerTest))
 suite.addTest(loader.loadTestsFromTestCase(LogManagerTest))

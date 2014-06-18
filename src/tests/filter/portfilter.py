@@ -83,3 +83,5 @@ class UDPFilterTest(PortFilterTest):
         self.assertTrue(_filter.execute([0,pkt]))
 
 
+if __name__ == "__main__":
+    unittest.main()

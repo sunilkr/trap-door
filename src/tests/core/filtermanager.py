@@ -145,3 +145,7 @@ class FilterManagerTest(unittest.TestCase):
         
         self.assertEqual(len(self.fm.chains),1)
         self.assertNotEqual(self.fm.chains[0].nxt, None)
+
+
+if __name__ == "__main__":
+    unittest.main()
