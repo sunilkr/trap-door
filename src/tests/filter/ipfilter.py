@@ -27,6 +27,23 @@ class IPFilterTest(unittest.TestCase):
 
         self.assertTrue(_filter.execute([0,pkt]))
 
+    def test_excute_with_child(self):
+        config={'name':'IPFilter.TEST',
+                'class':'filter.ipfilter.IPFilter',
+                'src':'198.252.206.140',
+                'both':'true',
+                'next':{
+                    'name':'TCPFilter.HTTP',
+                    'class':'filter.portfilter.TCPFilter',
+                    'dport':'80',
+                    'both':'true'
+                    }
+                }
+        _filter = create_chain(config)
+        pkt = '\x00\x90\xfb8\xb5H\xb8\xca:\x83sj\x08\x00E\x00\x00<\x06\xea@\x00@\x06\xf2\x17\xac\x1d\x00\x14\xc6\xfc\xce\x8c\xd9_\x00P+o\xe1{\x00\x00\x00\x00\xa0\x02r\x10A\xe9\x00\x00\x02\x04\x05\xb4\x04\x02\x08\n\x00+\xe7\x91\x00\x00\x00\x00\x01\x03\x03\x07'
+
+        self.assertTrue(_filter.execute([0,pkt]))
+    
     def test_attribs(self):
         config={'name':'IPFilter.TEST',
                 'src':'127.0.0.1',
@@ -53,7 +70,6 @@ class IPFilterTest(unittest.TestCase):
         self.assertEqual(attrs['next'],'None')
 
     def test_setattr(self):
-
         setattr(self._filter,'src','127.0.0.1')
         self.assertEqual(self._filter.src, '\x7f\x00\x00\x01')
 

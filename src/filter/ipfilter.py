@@ -21,9 +21,9 @@ class IPFilter(AbstractFilter):
 
     def execute(self,packet):
         result = 0
-        packet = L2.Ethernet(packet[1])       #[hdr,data]
-        if packet.type == L2.ETH_TYPE_IP:
-            ip_packet = packet.data
+        pkt = L2.Ethernet(packet[1])       #[hdr,data]
+        if hasattr(pkt,'ip'):
+            ip_packet = pkt.data
             if self.src:
                 if self.src == ip_packet.src or (self.both and self.src == ip_packet.dst):
                     result +=1

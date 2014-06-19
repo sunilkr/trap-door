@@ -53,7 +53,7 @@ class TextLogger(Logger):
     def __init_target(self, name):
         if name is not None:
             self.__file = open(name,'w')
-            hdr = "time|msec|len|proto.l2|eth.src|eth.dst|proto.l3|ip.src|ip.dst|proto.l4|l4.sport|l4.dport|tcp.flags|patload.len\n"
+            hdr = "time|msec|len|proto.l2|eth.src|eth.dst|proto.l3|ip.src|ip.dst|proto.l4|l4.sport|l4.dport|tcp.flags|payload.len\n"
 
             self.__file.write(hdr)
             self.__file.flush()

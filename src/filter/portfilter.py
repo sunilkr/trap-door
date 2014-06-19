@@ -1,5 +1,4 @@
-from dpkt import ethernet as L2
-from dpkt.ip import IP as L3
+from dpkt.ethernet import Ethernet
 
 from util.logging import syslog, Log
 from util.datatypes import *
@@ -63,7 +62,7 @@ class TCPFilter(PortFilter):
         super(TCPFilter, self).__setattr__(name,value)
 
     def execute(self,packet):
-        ethpkt = L2.Ethernet(packet[1])
+        ethpkt = Ethernet(packet[1])
 
         if hasattr(ethpkt,'ip'):
             ippkt = ethpkt.ip
@@ -91,7 +90,7 @@ class TCPFilter(PortFilter):
 class UDPFilter(PortFilter):
     
     def execute(self, packet):
-        pkt = L2.Ethernet(packet[1])
+        pkt = Ethernet(packet[1])
         
         if hasattr(pkt,'ip'):
             ippkt = pkt.ip

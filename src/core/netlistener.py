@@ -57,7 +57,7 @@ class NetListener:
             cmd,data = self.comm.recv()
             if cmd == dt.CMD_STOP:
                 self.__stop = True
-                self.comm.send("stopped")
+                self.comm.send([dt.STATUS_OK,0])
                 self.comm.close()
-                syslog(Log.INFO, "NetListener(%d)::STOP:: Stopped" %current_process().pid)
+                syslog(Log.INFO, "NetListener({0})::STOP:: Stopped".format(current_process().pid))
 

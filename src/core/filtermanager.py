@@ -55,7 +55,8 @@ class FilterManager(object):
                     self.__comm.close()
                     break
                 else:
-                    syslog(Log.WARN,"FilterManager({0}):: Filter queue is empty".format(self.pid))
+                    #syslog(Log.WARN,"FilterManager({0}):: Filter queue is empty".format(self.pid))
+                    pass
             except Exception, e:
                 syslog(Log.ERR,traceback.format_exc())
                 raise e
@@ -70,7 +71,7 @@ class FilterManager(object):
         if config.has_key('name') :
             name = config['name'] 
         else: 
-            return [dt.NO_SUCH_ITEM,"'name' is required attrubute"]
+            return [dt.ERR_NO_SUCH_ITEM,"'name' is required attrubute"]
 
         if self.filters.has_key(name):
             return [dt.ERR_CONFLICT, 'Filter "{0}" already added'.format(name)]

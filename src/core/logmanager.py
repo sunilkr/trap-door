@@ -32,13 +32,14 @@ class LogManager(object):
             except Queue.Empty as e:
                 if self.__stop:
                     syslog(Log.INFO, "LogManager({0}):: Stopping Loggers...".format(self.pid))
-                    for logger in self.__loggers.values():
+                    for logger in self.loggers.values():
                         logger.close()
                     self.comm.send([dt.STATUS_OK,'stopped'])
                     syslog(Log.INFO, "LogManager({0}):: Stopped".format(self.pid))
                     break
                 else:
-                    syslog(Log.WARN, "LogManager({0}):: Logger queue is empty".format(self.pid))
+                    #syslog(Log.WARN, "LogManager({0}):: Logger queue is empty".format(self.pid))
+                    pass
             except Exception, e:
                 syslog(Log.ERR, traceback.format_exc())
                 raise e

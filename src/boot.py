@@ -2,7 +2,7 @@ from core.controller import Controller
 from util.cfgparser import CfgParser
 from time import sleep
 
-CNF = 'config/config.cfg'
+CNF = 'config/config2.cfg'
 
 def main():
 
@@ -15,12 +15,12 @@ def main():
     
     print "Adding interfaces..."
     for iface in cfg['iface']:
+        print "Adding interface: {0}".format(iface)
         trapd.add_iface(iface)
-
 
     print "Adding filters..."
     for _filter in cfg['filters']:
-        trapd.add_filter(_filter)
+        trapd.add_filter_chain(_filter)
 
     print "Adding Loggers..."
     for logger in cfg['loggers']:

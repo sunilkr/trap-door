@@ -33,7 +33,8 @@ class Controller(object):
 
         self.dns_table  = {}
         self.dnsmanager = DNSUpdater(self.dns_table)
-        
+        self.__running = False
+
     def _init_loggers(self):
         local, remote = mp.Pipe() 
         self.loggermgr['proc'] = mp.Process(target=self.loggermgr['obj'].start, 
@@ -103,27 +104,24 @@ class Controller(object):
             comm.send([dt.CMD_STOP,None])
             comm.close()
         for proc in self.net_procs:
-            proc.join()
+            if proc.is_alive():
+                proc.join()
 
         syslog(Log.INFO, "Stopping FilterManager...")
-        self.filtermgr['comm'].send([dt.CMD_STOP,None])
-        self.filtermgr['proc'].join()
+        if self.filtermgr['proc'].is_alive():
+            self.filtermgr['comm'].send([dt.CMD_STOP,None])
+            self.filtermgr['proc'].join()
         self.filtermgr['comm'].close()
 
         syslog(Log.INFO, "Stopping LogManager...")
-        self.loggermgr['comm'].send([dt.CMD_STOP,None])
-        self.loggermgr['proc'].join()
+        if self.loggermgr['proc'].is_alive():
+            self.loggermgr['comm'].send([dt.CMD_STOP,None])
+            self.loggermgr['proc'].join()
         self.loggermgr['comm'].close()
         self.__running = False
 
         syslog(Log.INFO, "DONE")
         
-        
-    def add_ipfilter(self, config):
-        self.filtermgr['comm'].send([dt.CMD_ADD, config])
-        result = self.filtermgr['comm'].recv()
-        syslog(Log.INFO,result)
-        return result
 
     def add_filter(self,config):
         if config.has_key('src'):
@@ -144,13 +142,26 @@ class Controller(object):
 
     def add_iface(self,iface):
         netl = NetListener(iface)
-        self._add_listener(netl, start=True)
+        self._add_listener(netl, start=self.__running)
         syslog(Log.INFO, "Added listener on {0}".format(netl.getip()))
        
-    def new_chain(self,config):
-        self.filtermgr['comm'].send([dt.CMD_ADD_CHAIN, config])
+    def add_filter_chain(self,config):
+        config = self._resolve_names(config)
+        self.filtermgr['comm'].send([dt.CMD_FILTER_ADD_CHAIN, config])
         result = self.filtermgr['comm'].recv()
         syslog(Log.INFO, result)
+        return result
+
+    def _resolve_names(self,config):
+        conf = {}
+        for name, value in config.items():
+            if isinstance(value, dict):
+                conf[name]=self._resolve_names(value)
+            elif name in ['src','dst']:
+                conf[name] = self.dnsmanager.add_target(value, config['name'], name)
+            else:
+                conf[name]=value
+        return conf
 
 class DNSUpdater(Thread):
     def __init__(self,table,comm=None, wait=1):
@@ -161,7 +172,7 @@ class DNSUpdater(Thread):
         self.__stop = False
         self.log = open("../logs/dns.log","a")
 
-        self.re_ip = re.compile('^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])$')
+        #self.re_ip = re.compile('^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])$')
 
         Thread.__init__(self)
 
@@ -169,13 +180,13 @@ class DNSUpdater(Thread):
         ip = None
 
         if name != None:
-            if self.re_ip.match(name) != None:
-                return name
+            #if self.re_ip.match(name) != None:
+            #    return name
 
             if self.table.has_key(name):
-                self.table[name][1].append(target,attr)
+                self.table[name][1].append([target,attr])
             else:
-                data = (self.__resolve(name),[target,attr])
+                data = [self.__resolve(name),[[target,attr]]]
                 self.table[name] = data
 
             ip = self.table[name][0]
@@ -185,12 +196,18 @@ class DNSUpdater(Thread):
         return self.table[name][0]
 
     def __resolve(self,name):
-        ip = socket.gethostbyname(name)
-        self.log_dns(name,ip)
-        return ip
+        try:
+            ip = socket.gethostbyname(name)
+        except socket.gaierror:
+            self.log_dns(name,'DNS_ERR_NOT_RESOLVED')
+            return None
+        else:
+            self.log_dns(name,ip)
+            return ip
 
     def set_comm(self,comm):
         self.comm = comm
+
     def run(self):
         if self.comm is None:
             raise AttributeError, "comm must not be None"
@@ -203,10 +220,10 @@ class DNSUpdater(Thread):
                         self.table[name][0] = ip
                         self.log_dns(name,ip)
                         for target in targets:
-                            config = {'name':target[0],attr:ip}
+                            config = {'name':target[0], target[1]:ip}
                             try:
-                                comm.send([dt.CMD_UPDATE,config])
-                                syslog(Log.INFO, comm.recv())            
+                                self.comm.send([dt.CMD_UPDATE,config])
+                                syslog(Log.INFO, self.comm.recv())            
                             except IOError:
                                 pass
                 self.__t_last = time() + self.wait

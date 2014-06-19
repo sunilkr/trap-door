@@ -18,6 +18,9 @@ class CfgParserTest(unittest.TestCase):
         self.assertEqual(len(trap['filters']), 2)
         self.assertTrue(trap.has_key('loggers'))
         self.assertEqual(len(trap['loggers']), 1)
+        self.assertTrue(trap.has_key('iface'))
+        self.assertEqual(len(trap['iface']), 1)
+        self.assertEqual(trap['iface'][0], 'eth0')
 
         filter0 = trap['filters'][0]
         self.assertEqual(filter0['name'], 'IPFilter.GOOGLE')
