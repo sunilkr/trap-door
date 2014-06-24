@@ -1,4 +1,6 @@
 import unittest
+from ConfigParser import SafeConfigParser
+from StringIO import StringIO
 
 from util.cfgparser import CfgParser
 
@@ -52,6 +54,71 @@ class CfgParserTest(unittest.TestCase):
         self.assertEqual(logger0['target'], '../logs/cnf-test.pcap')
         self.assertEqual(logger0['class'], 'logger.pcaplogger.PcapLogger')
 
+    def test_flatten(self):
+        config={
+                    'iface':['eth0'],
+                    'filters':[{
+                        'name':'IPFilter.TEST1',
+                        'class':'filter.ipfilter.IPFilter',
+                        'src':'google.co.in',
+                        'both':'True',
+                        'next':{
+                            'name':'TCPFilter.TEST1',
+                            'class':'filter.portfilter.TCPFilter',
+                            'sport':'80',
+                            'flags':['SYN', 'ACK', 'FIN']
+                            }
+                        },{
+                        'name':'IPFilter.TEST2',
+                        'class':'filter.ipfilter.IPFilter',
+                        'src':'172.29.0.1',
+                        'both':'False'
+                        }],
+                    'loggers':[{
+                        'name':'PCAPLogger.TEST1',
+                        'class':'logger.pcaplogger.PcapLogger',
+                        'target':'/tmp/test.pcap',
+                        }]
+                    }
+                
+        io = StringIO()    
+        f = open('/tmp/test.ini', 'w')
+        data = self.parser.flatten(config, f)
+        f.close()
+        cfgparser = SafeConfigParser()
+        cfgparser.read('/tmp/test.ini')
+        sections = cfgparser.sections()
+        self.assertEqual(len(sections), 5)
+
+        self.assertTrue(cfgparser.has_section('trapdoor'))
+        self.assertEqual(cfgparser.get('trapdoor', 'iface'), 'eth0,')
+        self.assertEqual(cfgparser.get('trapdoor', 'filters'), 'IPFilter.TEST1,IPFilter.TEST2,')
+        self.assertEqual(cfgparser.get('trapdoor', 'loggers'), 'PCAPLogger.TEST1,')
+
+        self.assertTrue(cfgparser.has_section('IPFilter.TEST1'))
+        self.assertEqual(cfgparser.get('IPFilter.TEST1', 'name'), 'IPFilter.TEST1')
+        self.assertEqual(cfgparser.get('IPFilter.TEST1', 'class'), 'filter.ipfilter.IPFilter')
+        self.assertEqual(cfgparser.get('IPFilter.TEST1', 'src'), 'google.co.in')
+        self.assertEqual(cfgparser.get('IPFilter.TEST1', 'both').lower(), 'true')
+        self.assertEqual(cfgparser.get('IPFilter.TEST1', 'next'), 'TCPFilter.TEST1')
+        
+        self.assertTrue(cfgparser.has_section('TCPFilter.TEST1'))
+        self.assertEqual(cfgparser.get('TCPFilter.TEST1', 'name'), 'TCPFilter.TEST1')
+        self.assertEqual(cfgparser.get('TCPFilter.TEST1', 'class'), 'filter.portfilter.TCPFilter')
+        self.assertEqual(cfgparser.get('TCPFilter.TEST1', 'sport'), '80')
+        self.assertEqual(cfgparser.get('TCPFilter.TEST1', 'flags'), 'SYN,,ACK,FIN')
+        
+        self.assertTrue(cfgparser.has_section('IPFilter.TEST2'))
+        self.assertEqual(cfgparser.get('IPFilter.TEST2', 'name'), 'IPFilter.TEST2')
+        self.assertEqual(cfgparser.get('IPFilter.TEST2', 'class'), 'filter.ipfilter.IPFilter')
+        self.assertEqual(cfgparser.get('IPFilter.TEST2', 'src'), '172.29.0.1')
+        self.assertEqual(cfgparser.get('IPFilter.TEST2', 'both').lower(), 'false')
+
+        self.assertTrue(cfgparser.has_section('PCAPLogger.TEST1'))
+        self.assertEqual(cfgparser.get('PCAPLogger.TEST1', 'name'), 'PCAPLogger.TEST1')
+        self.assertEqual(cfgparser.get('PCAPLogger.TEST1', 'class'), 'logger.pcaplogger.PcapLogger')
+        self.assertEqual(cfgparser.get('PCAPLogger.TEST1', 'target'), '/tmp/test.pcap')
+        
 
 if __name__ == "__main__":
     unittest.main()

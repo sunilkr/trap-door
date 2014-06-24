@@ -15,7 +15,7 @@ class ControllerTest(unittest.TestCase):
     def test_add_iface(self):      # Requires sudo
         self.ctrlr.add_iface('lo')
         self.assertEqual(len(self.ctrlr.pipe_net), 1)
-        self.assertEqual(len(self.ctrlr.listeners), 1)
+        self.assertEqual(len(self.ctrlr.ifaces), 1)
         self.assertEqual(len(self.ctrlr.net_procs), 1)
 
     def test_add_logger(self):
@@ -96,6 +96,109 @@ class ControllerTest(unittest.TestCase):
         res = self.ctrlr.add_filter(config)
         self.assertEqual(res[0], dt.STATUS_OK)
 
+    def test_get_config(self):
+        self.ctrlr.start()
+        config={'iface':['lo'],
+                'filters':[{
+                    'name':'IPFilter.TEST1',
+                    'class':'filter.ipfilter.IPFilter',
+                    'src':'google.co.in',
+                    'next':{
+                        'name':'TCPFilter.TEST1',
+                        'class':'filter.portfilter.TCPFilter',  
+                        }
+                    },{
+                    'name':'IPFilter.TEST2',
+                    'class':'filter.ipfilter.IPFilter',
+                    'dst':'127.0.0.1'
+                    }],
+                'loggers':[{
+                    'name':'PCAPLogger.TEST1',
+                    'class':'logger.pcaplogger.PcapLogger',
+                    'target':'/tmp/test.pcap'},
+                    {'name':'TextLogger.TEST1',
+                    'class':'logger.textlogger.TextLogger',
+                    'target':'/tmp/test.log'
+                    }]
+                }
+        for chain in config['filters']:
+            res = self.ctrlr.add_filter_chain(chain)
+            self.assertEqual(res[0], dt.STATUS_OK)
+
+        for logger in config['loggers']:
+            res = self.ctrlr.add_logger(logger)
+            self.assertEqual(res[0], dt.STATUS_OK)
+        
+        for iface in config['iface']:
+            self.assertTrue(self.ctrlr.add_iface(iface))
+        
+        conf = self.ctrlr.get_config()
+        #self.ctrlr.finish()
+        
+        self.assertEqual(len(conf), 3)
+        self.assertEqual(len(conf['iface']), 1)
+        self.assertEqual(conf['iface'][0], 'lo')
+
+        filters = conf['filters']
+        self.assertEqual(len(filters), 2)
+        
+        chain = filters[0]
+        self.assertEqual(chain['name'], 'IPFilter.TEST1')
+        self.assertEqual(chain['class'], 'filter.ipfilter.IPFilter')
+        self.assertEqual(chain['src'], 'google.co.in')
+        self.assertEqual(chain['next']['name'], 'TCPFilter.TEST1')
+        self.assertEqual(chain['next']['class'], 'filter.portfilter.TCPFilter')
+        self.assertFalse(chain['next'].has_key('next'))
+        
+        chain = filters[1]
+        self.assertEqual(chain['name'], 'IPFilter.TEST2')
+        self.assertEqual(chain['class'], 'filter.ipfilter.IPFilter')
+        self.assertEqual(chain['dst'], '127.0.0.1')
+        self.assertFalse(chain.has_key('next'))
+
+        self.assertEqual(len(conf['loggers']), 2)
+
+        logger = conf['loggers'][1]
+        self.assertEqual(logger['name'], 'PCAPLogger.TEST1')
+        self.assertEqual(logger['class'], 'logger.pcaplogger.PcapLogger')
+        self.assertEqual(logger['target'], '/tmp/test.pcap')
+
+        logger = conf['loggers'][0]
+        self.assertEqual(logger['name'], 'TextLogger.TEST1')
+        self.assertEqual(logger['class'], 'logger.textlogger.TextLogger')
+        self.assertEqual(logger['target'], '/tmp/test.log')
+        
+    def test_resolve_ip(self):
+        self.ctrlr.start()
+        filters=[{  'name':'IPFilter.TEST1',
+                    'class':'filter.ipfilter.IPFilter',
+                    'src':'google.co.in',
+                    'next':{
+                        'name':'TCPFilter.TEST1',
+                        'class':'filter.portfilter.TCPFilter',  
+                        }
+                    },{
+                    'name':'IPFilter.TEST2',
+                    'class':'filter.ipfilter.IPFilter',
+                    'dst':'127.0.0.1'
+                }]
+                
+
+        for chain in filters:
+            res = self.ctrlr.add_filter_chain(chain)
+            self.assertEqual(res[0], dt.STATUS_OK)
+
+        conf = self.ctrlr._resolve_ip(filters)
+        self.assertEqual(len(conf), 2)
+        self.assertEqual(conf[0]['name'], 'IPFilter.TEST1')
+        self.assertEqual(conf[0]['src'], 'google.co.in')
+        self.assertEqual(conf[0]['class'], 'filter.ipfilter.IPFilter')
+        self.assertEqual(conf[0]['next']['name'], 'TCPFilter.TEST1')
+        self.assertEqual(conf[0]['next']['class'], 'filter.portfilter.TCPFilter')
+        self.assertEqual(conf[1]['name'], 'IPFilter.TEST2')
+        self.assertEqual(conf[1]['class'], 'filter.ipfilter.IPFilter')
+        self.assertEqual(conf[1]['dst'], '127.0.0.1')
+
     def tearDown(self):
         self.ctrlr.finish()
         
@@ -138,6 +241,10 @@ class DNSUpdaterTest(unittest.TestCase):
 
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries['ubuntu.com'], ip)
+
+    def test_get_domain(self):
+        ip = self.dns.add_target('google.co.in', 'TEST', 'src')
+        self.assertEqual(self.dns.get_domain(ip), 'google.co.in')
 
     def _test_run(self):    #test individually. can have INFINITE delay before msg
         l,r = mp.Pipe()

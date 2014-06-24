@@ -18,7 +18,7 @@ class Controller(object):
     instance = None
 
     def __init__(self):
-        self.listeners = []
+        self.ifaces = []
         self.net_procs = []
         self.pipe_net  = []
         self.loggermgr = {}
@@ -51,13 +51,13 @@ class Controller(object):
     def _add_listener(self,listener,start=False):
         local,remote = mp.Pipe()
         self.pipe_net.append(local)
-        self.listeners.append(listener)
         proc = mp.Process(target=listener.start, args=(self.filtermgr['queue'],remote))
         self.net_procs.append(proc)
         if start:
             proc.start()
             syslog(Log.INFO, "Listener for {0} started. PID: {1}".format(
                 listener.getip(), proc.pid))
+        return True
 
     def start(self):
         syslog(Log.INFO, "Starting Filter Manager...")
@@ -142,8 +142,11 @@ class Controller(object):
 
     def add_iface(self,iface):
         netl = NetListener(iface)
-        self._add_listener(netl, start=self.__running)
-        syslog(Log.INFO, "Added listener on {0}".format(netl.getip()))
+        if(self._add_listener(netl, start=self.__running)):
+            syslog(Log.INFO, "Added listener on {0}".format(netl.getip()))
+            self.ifaces.append(iface)
+            return True
+        return False
        
     def add_filter_chain(self,config):
         config = self._resolve_names(config)
@@ -163,6 +166,35 @@ class Controller(object):
                 conf[name]=value
         return conf
 
+    def get_config(self):
+        config={'iface':self.ifaces}
+
+        self.filtermgr['comm'].send([dt.CMD_GET_CONFIG, 0])
+        result = self.filtermgr['comm'].recv()
+        config['filters'] = self._resolve_ip(result[1])
+
+        self.loggermgr['comm'].send([dt.CMD_GET_CONFIG, 0])
+        result = self.loggermgr['comm'].recv()
+        config['loggers'] = result[1]
+
+        return config
+
+    def _resolve_ip(self,value):
+        data = None
+        if isinstance(value, dict):
+            data = {}
+            for k , v in value.items():
+                data[k] = self._resolve_ip(v)
+        elif isinstance(value, list):
+            data = []
+            for v in value:
+                data.append(self._resolve_ip(v))
+        else:
+            data = self.dnsmanager.get_domain(value)
+
+        return data
+
+#  Manage Name resolutions
 class DNSUpdater(Thread):
     def __init__(self,table,comm=None, wait=1):
         self.table = table
@@ -171,8 +203,6 @@ class DNSUpdater(Thread):
         self.__t_last = time() + self.wait
         self.__stop = False
         self.log = open("../logs/dns.log","a")
-
-        #self.re_ip = re.compile('^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])$')
 
         Thread.__init__(self)
 
@@ -194,6 +224,15 @@ class DNSUpdater(Thread):
 
     def get_ip(self,name):
         return self.table[name][0]
+    
+    def get_domain(self, target):
+        domain = target
+        for name, ip in self.table.items():
+            if ip[0] == target:
+                domain = name
+                break
+
+        return domain
 
     def __resolve(self,name):
         try:

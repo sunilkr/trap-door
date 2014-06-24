@@ -171,6 +171,12 @@ class FilterManager(object):
 
         return [dt.STATUS_OK, "Filter chain added successfully"]
 
+    def config(self):
+        filters = []
+        for chain in self.chains:
+            filters.append(chain.attrs())
+        return filters
+
     def check_comm(self):
         if self.__comm.poll():
             cmd,data = self.__comm.recv()
@@ -190,6 +196,9 @@ class FilterManager(object):
 
             elif cmd == dt.CMD_FILTER_ADD_CHAIN:
                 self.__comm.send(self._new_chain(data))
+            
+            elif cmd == dt.CMD_GET_CONFIG:
+                self.__comm.send([dt.STATUS_OK, self.config()])
 
             else:
-                self.__comm.send(dt.ERR_SEE_LOG, "Unknown command: {0}".format(cmd))
+                self.__comm.send([dt.ERR_SEE_LOG, "Unknown command: {0}".format(cmd)])

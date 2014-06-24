@@ -64,8 +64,7 @@ class TextLogger(Logger):
 #        syslog(Log.DBG,"LOGGER.__setattr__ {0}:{1}".format(name,value))
         if name == 'target':
             self.__init_target(value)
-        else:
-            super(TextLogger,self).__setattr__(name,value)
+        super(TextLogger,self).__setattr__(name,value)
 
     def close(self):
         if self.__file is not None:

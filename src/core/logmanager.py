@@ -66,6 +66,13 @@ class LogManager(object):
             elif cmd == dt.CMD_DELETE:
                 self.comm.send(self._delete(data))
 
+            elif cmd == dt.CMD_GET_CONFIG:
+                self.comm.send([dt.STATUS_OK, self.config()])
+
+            else:
+                self.cmd.send([dt.ERR_SEE_LOG, 'Unknown command: {0}'.format(cmd)])
+
+
     def _add(self, config):
         if config.has_key('name'):
             name = config['name']
@@ -120,5 +127,11 @@ class LogManager(object):
         logger.set_filter(_filter)
         syslog(Log.INFO, "Filter:{0} added to logger:{1}".format(_filter.name, name))
         return [dt.STATUS_OK, "Filter:{0} added to logger:{1}".format(_filter.name,name)]
+
+    def config(self):
+        config=[]
+        for logger in self.loggers.values():
+            config.append(logger.attrs())
+        return config
 
 

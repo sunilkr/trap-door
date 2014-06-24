@@ -42,12 +42,14 @@ class PortFilter(AbstractFilter):
         return super(PortFilter,self).execute(packet)
     
     def attrs(self):
-        return {'name':self.name,
-                'sport':self.sport,
-                'dport':self.dport,
-                'both':self.both,
-                'next':str(self.nxt)
-                }
+        config = super(PortFilter, self).attrs()
+        if self.sport:
+            config['sport'] = str(self.sport)
+        if self.dport:
+            config['dport'] = str(self.dport)
+        
+        config['both'] = str(self.both)
+        return config
 
 class TCPFilter(PortFilter):
 
@@ -84,7 +86,8 @@ class TCPFilter(PortFilter):
 
     def attrs(self):
         attrs = super(TCPFilter,self).attrs()
-        attrs['flags'] = value_to_tcp_flags(self.flags)
+        if self.flags:
+            attrs['flags'] = str(value_to_tcp_flags(self.flags))
         return attrs
 
 class UDPFilter(PortFilter):

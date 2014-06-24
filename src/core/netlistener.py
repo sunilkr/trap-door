@@ -32,6 +32,9 @@ class NetListener:
     def getpcap(self):
         return self.pcap
 
+    def get_iface(self):
+        return self.__iface
+
     def start(self,queue,comm):
         self.queue = queue
         self.comm = comm

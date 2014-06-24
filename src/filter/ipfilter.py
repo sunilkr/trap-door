@@ -46,9 +46,10 @@ class IPFilter(AbstractFilter):
                 bytes_to_ip4(self.src), bytes_to_ip4(self.dst), self.both)
 
     def attrs(self):
-        return {'name'  : self.name,
-                'src'   : bytes_to_ip4(self.src),
-                'dst'   : bytes_to_ip4(self.dst),
-                'both'  : self.both,
-                'next'  : str(self.nxt)
-                }
+        config = super(IPFilter, self).attrs()
+        if self.src:
+            config['src'] = bytes_to_ip4(self.src)
+        if self.dst:
+            config['dst'] = bytes_to_ip4(self.dst)
+        config['both'] = str(self.both)
+        return config

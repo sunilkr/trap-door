@@ -17,3 +17,11 @@ class AbstractFilter(object):
         if value == 'None':     # Explicitely set value to None
             value = None
         super(AbstractFilter,self).__setattr__(name,value)
+
+    def attrs(self):
+        config = {}
+        config['class'] = self.__module__ + "." + self.__class__.__name__
+        config['name'] = self.name
+        if self.nxt:
+            config['next'] = self.nxt.attrs()
+        return config

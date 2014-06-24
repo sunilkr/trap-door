@@ -1,8 +1,5 @@
 class Logger(object):
 
-    __filter = None
-    target = None
-
     def __init__(self, name=None, target=None, _filter=None):
         self.target = target
         self.__filter = _filter
@@ -25,3 +22,14 @@ class Logger(object):
         
     def close(self):
         pass
+
+    def attrs(self):
+        attrs ={'name':  self.name,
+                'class': self.__module__ + "." + self.__class__.__name__,
+                'target': self.target
+                }
+        if self.__filter:
+            attrs['filter'] = self.__filter.attrs()
+
+        return attrs
+

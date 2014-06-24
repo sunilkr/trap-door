@@ -1,12 +1,14 @@
 from ConfigParser import SafeConfigParser
 import sys
+from StringIO import StringIO
 
 class CfgParser(object):
 
-    def __init__(self):
-        self.parser = SafeConfigParser()
+    #def __init__(self):
+    #    self.parser = SafeConfigParser()
 
     def parse(self,cfg):
+        self.parser = SafeConfigParser()
         self.parser.read(cfg)
         sections = self.parser.sections()
         self.config = {sections[0] : self._section_to_dict(sections[0])}
@@ -64,6 +66,40 @@ class CfgParser(object):
             else:
                 print pref +"  {0}\t: {1}".format(k, v)
         print pref + "}"
+
+    def flatten(self, config, out):
+        self.parser = SafeConfigParser()
+        self.parser.add_section('trapdoor')
+        for key, value in config.items():
+            self._enflat(key, value, 'trapdoor')
+        self.parser.write(out)
+        return True
+
+    def _enflat(self, key, value, parent):
+        if isinstance(value, dict):
+            self.parser.add_section(value['name'])
+            if self.parser.has_option(parent, key):
+                opt = self.parser.get(parent, key)
+                self.parser.set(parent, key, opt+value['name']+',')
+            else:
+                self.parser.set(parent, key, value['name']+',')
+
+            for k, v in value.items():
+                self._enflat(k, v, value['name'])
+
+        elif isinstance(value, list):
+            for v in value:
+                if isinstance(v, dict):
+                    self._enflat(key, v, parent)
+                else:
+                    if self.parser.has_option(parent, key):
+                        opt = self.parser.get(parent, key)
+                        self.parser.set(parent, key, opt+v+',')
+                    else:
+                        self.parser.set(parent, key, v +',')
+        else:
+            self.parser.set(parent, key, value) 
+        
 
 if __name__ == "__main__":
     import pprint

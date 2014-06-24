@@ -101,6 +101,52 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(_filter.nxt.__class__.__name__, 'TCPFilter')
         self.assertEqual(_filter.nxt.sport, 80)
 
+    def test_config(self):
+        config=[{'name':'PCAPLogger.TEST',
+                'class':'logger.pcaplogger.PcapLogger',
+                'target':'/tmp/test.pcap',
+                'filter':{
+                    'name':'IPFilter.TEST',
+                    'class':'filter.ipfilter.IPFilter',
+                    'src':'127.0.0.1',
+                    'next':{
+                        'name':'TCPFilter.TEST',
+                        'class':'filter.portfilter.TCPFilter',
+                        'sport':'80',
+                        'both':'true'
+                        }
+                    }
+                },
+                {'name':'TextLogger.TEST',
+                'class':'logger.textlogger.TextLogger',
+                'target':'/tmp/test.log'
+                }
+            ]
+        
+        for logger in config:
+            self.lm._add(logger)
+
+        attrs = self.lm.config()
+        self.assertEqual(len(attrs), 2)
+
+        logger = attrs[1]
+        #self.assertEqual(logger['name'], config[0]['name'])
+        self.assertEqual(logger['name'], 'PCAPLogger.TEST')
+        self.assertEqual(logger['class'], config[0]['class'])
+        self.assertEqual(logger['target'], config[0]['target'])
+        
+        fltr = logger['filter']
+        cfltr = config[0]['filter']
+        self.assertEqual(fltr['name'], cfltr['name'])
+        self.assertEqual(fltr['class'], cfltr['class'])
+        self.assertEqual(fltr['next']['class'], cfltr['next']['class'])
+
+        logger = attrs[0]
+        self.assertEqual(logger['name'], config[1]['name'])
+        self.assertEqual(logger['class'], config[1]['class'])
+        self.assertEqual(logger['target'], config[1]['target'])
+        with self.assertRaises(KeyError):
+            self.assertEqual(logger['filter'], None)
 
 
 if __name__ == "__main__":

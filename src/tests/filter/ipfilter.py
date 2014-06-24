@@ -66,8 +66,9 @@ class IPFilterTest(unittest.TestCase):
         self.assertEqual(attrs['src'],'127.0.0.1')
         self.assertEqual(attrs['dst'],'172.0.0.1')
         self.assertEqual(attrs['name'],'IPFilter.TEST')
-        self.assertTrue(attrs['both'])
-        self.assertEqual(attrs['next'],'None')
+        self.assertEqual(attrs['both'].lower(), 'true')
+        with self.assertRaises(KeyError):
+            self.assertEqual(attrs['next'],'None')
 
     def test_setattr(self):
         setattr(self._filter,'src','127.0.0.1')
