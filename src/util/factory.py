@@ -31,7 +31,6 @@ def create_chain(config):
     return __obj_chain(config)
     
 def __obj_chain(config):
-    print "creating %s" %config['class']
     obj = create_object(config['class'])
     obj = apply_attrs(obj,config)
 

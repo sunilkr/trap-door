@@ -77,19 +77,22 @@ class CfgParser(object):
 
     def _enflat(self, key, value, parent):
         if isinstance(value, dict):
-            self.parser.add_section(value['name'])
-            if self.parser.has_option(parent, key):
-                opt = self.parser.get(parent, key)
-                self.parser.set(parent, key, opt+value['name']+',')
-            else:
-                self.parser.set(parent, key, value['name']+',')
+            if not self.parser.has_option(parent, key): #if it has, it was parent was 'list'
+                self.parser.set(parent, key, value['name'])
 
+            self.parser.add_section(value['name'])
             for k, v in value.items():
                 self._enflat(k, v, value['name'])
 
         elif isinstance(value, list):
             for v in value:
                 if isinstance(v, dict):
+                    if self.parser.has_option(parent, key):
+                        opt = self.parser.get(parent, key)
+                        self.parser.set(parent, key, opt+v['name']+',')
+                    else:
+                        self.parser.set(parent, key, v['name']+',')
+
                     self._enflat(key, v, parent)
                 else:
                     if self.parser.has_option(parent, key):
@@ -99,7 +102,6 @@ class CfgParser(object):
                         self.parser.set(parent, key, v +',')
         else:
             self.parser.set(parent, key, value) 
-        
 
 if __name__ == "__main__":
     import pprint

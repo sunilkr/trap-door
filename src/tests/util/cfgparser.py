@@ -106,7 +106,7 @@ class CfgParserTest(unittest.TestCase):
         self.assertEqual(cfgparser.get('TCPFilter.TEST1', 'name'), 'TCPFilter.TEST1')
         self.assertEqual(cfgparser.get('TCPFilter.TEST1', 'class'), 'filter.portfilter.TCPFilter')
         self.assertEqual(cfgparser.get('TCPFilter.TEST1', 'sport'), '80')
-        self.assertEqual(cfgparser.get('TCPFilter.TEST1', 'flags'), 'SYN,,ACK,FIN')
+        self.assertEqual(cfgparser.get('TCPFilter.TEST1', 'flags'), 'SYN,ACK,FIN,')
         
         self.assertTrue(cfgparser.has_section('IPFilter.TEST2'))
         self.assertEqual(cfgparser.get('IPFilter.TEST2', 'name'), 'IPFilter.TEST2')

@@ -29,7 +29,6 @@ class FilterManagerTest(unittest.TestCase):
                 }
         status = self.fm._add(config)
        
-        print status
         self.assertEqual(status[0],dt.STATUS_OK)
         self.assertEqual(len(self.fm.filters),2)
         self.assertTrue(self.fm.filters.has_key('IPFilter.CHILD'))
