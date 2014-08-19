@@ -147,7 +147,11 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(logger['target'], config[1]['target'])
         with self.assertRaises(KeyError):
             self.assertEqual(logger['filter'], None)
-
+        
+    def test_clear(self):
+        self.test_add_with_filter_chain()
+        self.lm._clear()
+        self.assertEqual(len(self.lm.loggers), 0)
 
 if __name__ == "__main__":
     unittest.main()

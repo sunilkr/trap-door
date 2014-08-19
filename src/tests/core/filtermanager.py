@@ -206,6 +206,12 @@ class FilterManagerTest(unittest.TestCase):
         self.assertEqual(chain['next']['class'], config[2]['next']['class'])
         self.assertEqual(chain['next']['dport'], config[2]['next']['dport'])
 
+    def test_clear(self):
+        self.test_new_chain_3()
+        self.fm._clear()
+        self.assertEqual(len(self.fm.filters), 0)
+        self.assertEqual(len(self.fm.chains), 0)
+
     def test_start(self):
         fq = Queue()
         lq = Queue()

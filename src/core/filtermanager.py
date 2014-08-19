@@ -177,6 +177,11 @@ class FilterManager(object):
             filters.append(chain.attrs())
         return filters
 
+    def _clear(self):
+        self.chains = []
+        self.filters = {}
+        return [dt.STATUS_OK, 'All filters cleared']
+
     def check_comm(self):
         if self.__comm.poll():
             cmd,data = self.__comm.recv()
@@ -199,6 +204,9 @@ class FilterManager(object):
             
             elif cmd == dt.CMD_GET_CONFIG:
                 self.__comm.send([dt.STATUS_OK, self.config()])
+
+            elif cmd == dt.CMD_CLEAR:
+                self.__comm.send(self._clear())
 
             else:
                 self.__comm.send([dt.ERR_SEE_LOG, "Unknown command: {0}".format(cmd)])

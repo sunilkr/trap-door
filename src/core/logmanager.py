@@ -69,6 +69,9 @@ class LogManager(object):
             elif cmd == dt.CMD_GET_CONFIG:
                 self.comm.send([dt.STATUS_OK, self.config()])
 
+            elif cmd == dt.CMD_CLEAR:
+                self.comm.send(self._clear())
+
             else:
                 self.cmd.send([dt.ERR_SEE_LOG, 'Unknown command: {0}'.format(cmd)])
 
@@ -103,6 +106,7 @@ class LogManager(object):
     def _delete(self, config):
         name = config['name']
         if self.loggers.has_key(name):
+            self.loggers[name].close()
             del self.loggers[name]
             return [dt.STATUS_OK, "Logger {0} deleted".format(name)]
         else:
@@ -133,5 +137,11 @@ class LogManager(object):
         for logger in self.loggers.values():
             config.append(logger.attrs())
         return config
+
+    def _clear(self):
+        for logger in self.loggers.values():
+            logger.close()
+        self.loggers = {}
+        return [dt.STATUS_OK, "All loggers cleared"]
 
 
