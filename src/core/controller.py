@@ -5,6 +5,7 @@ from time import sleep, time, strftime, localtime
 import re
 import sys
 import socket
+import signal
 
 ## Package Imports
 from .netlistener import NetListener
@@ -18,9 +19,7 @@ class Controller(object):
     instance = None
 
     def __init__(self):
-        self.ifaces = []
-        self.net_procs = []
-        self.pipe_net  = []
+        self.ifaces = {}
         self.loggermgr = {}
         self.loggermgr['queue'] = mp.Queue()    
         self.loggermgr['obj']   = LogManager()
@@ -31,8 +30,7 @@ class Controller(object):
         self.filtermgr['obj']   = FilterManager()
         self._init_filters()
 
-        self.dns_table  = {}
-        self.dnsmanager = DNSUpdater(self.dns_table)
+        self.dnsmanager = DNSUpdater()
         self.__running = False
 
     def _init_loggers(self):
@@ -48,17 +46,47 @@ class Controller(object):
         self.filtermgr['proc'] = mp.Process(target=self.filtermgr['obj'].start, 
                 args=(self.filtermgr['queue'], self.loggermgr['queue'], remote))
     
-    def _add_listener(self,listener,start=False):
+    # Return 0:STATUS_OK on success
+    def add_iface(self,iface):
+        if self.ifaces.has_key(iface):
+            syslog(Log.WARN, "Already listening on {0}".format(iface))
+            return dt.ERR_CONFLICT
+        
+        listener = NetListener(iface)
         local,remote = mp.Pipe()
-        self.pipe_net.append(local)
         proc = mp.Process(target=listener.start, args=(self.filtermgr['queue'],remote))
-        self.net_procs.append(proc)
-        if start:
+        if self.__running:
             proc.start()
-            syslog(Log.INFO, "Listener for {0} started. PID: {1}".format(
-                listener.getip(), proc.pid))
-        return True
+            syslog(Log.INFO, "Listener for {2}:{0} started. PID: {1}".format(
+                listener.getip(), proc.pid, iface))
+        
+        self.ifaces[iface] = {}
+        self.ifaces[iface]['comm'] = local
+        self.ifaces[iface]['proc'] = proc
+        syslog(Log.INFO, "Listener added for {0}".format(iface))
+        return dt.STATUS_OK
 
+    # Returns 0:STATUS_OK on success
+    def remove_iface(self, iface):
+        if not self.ifaces.has_key(iface):
+            return dt.ERR_NO_SUCH_ITEM
+        
+        proc = self.ifaces[iface]['proc']   # Need improvements...
+        if not proc.is_alive():
+            syslog(Log.WARN, "Listener for {0} is not running".format(iface))
+            del self.ifaces[iface]
+            return dt.STATUS_OK
+
+        comm = self.ifaces[iface]['comm']
+        comm.send([dt.CMD_STOP,0])
+        result = comm.recv()
+        comm.close()
+        proc.join()
+        
+        del self.ifaces[iface]
+        return dt.STATUS_OK
+
+    # Start all processes....    
     def start(self):
         syslog(Log.INFO, "Starting Filter Manager...")
         self.filtermgr['proc'].start()
@@ -69,10 +97,11 @@ class Controller(object):
         syslog(Log.INFO, "LogManager PID: {0}".format(self.loggermgr['proc'].pid))
 
         syslog(Log.INFO, "Starting Listeners...")
-        for proc in self.net_procs:
+        for iface in self.ifaces.keys():
+            proc = self.ifaces[iface]['proc']
             if not proc.is_alive():
                 proc.start()
-            syslog(Log.INFO, "Listener PID: {0}".format(proc.pid))
+                syslog(Log.INFO, "Started Listener for {1}, PID: {0}".format(proc.pid, iface))
 
         syslog(Log.INFO, "Starting DNS Manager...")
         self.dnsmanager.set_comm(self.filtermgr['comm'])
@@ -99,20 +128,26 @@ class Controller(object):
         syslog(Log.INFO,"Stopping DNS Manager...")
         self.dnsmanager.stop()
 
+        # Stopping Listeners...
         syslog(Log.INFO,"Stopping Listeners...")
-        for comm in self.pipe_net:
+        for iface in self.ifaces.keys():
+            proc = self.ifaces[iface]['proc']
+            if not proc.is_alive():
+                continue
+            comm = self.ifaces[iface]['comm']
             comm.send([dt.CMD_STOP,None])
+            result = comm.recv()
             comm.close()
-        for proc in self.net_procs:
-            if proc.is_alive():
-                proc.join()
-
+            proc.join()
+        
+        # Stopping FilterManager...
         syslog(Log.INFO, "Stopping FilterManager...")
         if self.filtermgr['proc'].is_alive():
             self.filtermgr['comm'].send([dt.CMD_STOP,None])
             self.filtermgr['proc'].join()
         self.filtermgr['comm'].close()
 
+        # Stopping LogManager...
         syslog(Log.INFO, "Stopping LogManager...")
         if self.loggermgr['proc'].is_alive():
             self.loggermgr['comm'].send([dt.CMD_STOP,None])
@@ -122,7 +157,7 @@ class Controller(object):
 
         syslog(Log.INFO, "DONE")
         
-
+    # Add single Filter in middle/end of chain
     def add_filter(self,config):
         if config.has_key('src'):
             config['src'] = self.dnsmanager.add_target(config['src'],config['name'],'src')
@@ -134,20 +169,14 @@ class Controller(object):
         syslog(Log.INFO, result)
         return result
 
+    # Add Logger
     def add_logger(self, config):
         self.loggermgr['comm'].send([dt.CMD_ADD, config])
         result = self.loggermgr['comm'].recv()
         syslog(Log.INFO,result)
         return result
-
-    def add_iface(self,iface):
-        netl = NetListener(iface)
-        if(self._add_listener(netl, start=self.__running)):
-            syslog(Log.INFO, "Added listener on {0}".format(netl.getip()))
-            self.ifaces.append(iface)
-            return True
-        return False
-       
+    
+    # Add new filter chain
     def add_filter_chain(self,config):
         config = self._resolve_names(config)
         self.filtermgr['comm'].send([dt.CMD_FILTER_ADD_CHAIN, config])
@@ -155,6 +184,7 @@ class Controller(object):
         syslog(Log.INFO, result)
         return result
 
+    # Convert all src & dst fields to IP
     def _resolve_names(self,config):
         conf = {}
         for name, value in config.items():
@@ -166,8 +196,9 @@ class Controller(object):
                 conf[name]=value
         return conf
 
+    # Get current configuration
     def get_config(self):
-        config={'iface':self.ifaces}
+        config={'iface':self.ifaces.keys()}
 
         self.filtermgr['comm'].send([dt.CMD_GET_CONFIG, 0])
         result = self.filtermgr['comm'].recv()
@@ -179,6 +210,7 @@ class Controller(object):
 
         return config
 
+    # Covert IP to domain name if possible.
     def _resolve_ip(self,value):
         data = None
         if isinstance(value, dict):
@@ -194,9 +226,35 @@ class Controller(object):
 
         return data
 
+    # Reset all systems. For RELOAD
+    # Return: 0:STATUS_OK
+    def reset(self):
+        # Stop listeners
+        for iface in self.ifaces.keys():
+            self.remove_iface(iface)
+
+        # Clear filters
+        self.filtermgr['comm'].send([dt.CMD_CLEAR, None])
+        result = self.filtermgr['comm'].recv()
+        syslog(Log.INFO, "Clearing filters... {0}".format(result[1]))
+
+        # Clear loggers
+        self.loggermgr['comm'].send([dt.CMD_CLEAR, None])
+        result = self.loggermgr['comm'].recv()
+        syslog(Log.INFO, "Clearing loggers... {0}".format(result[1]))
+        
+        # Restart dnsmanager
+        # self.dnsmanager.stop()
+        self.dnsmanager.clear()
+        #self.dnsmanager.start()
+        syslog(Log.INFO, "Cleared DNS Entries.")
+        
+        return dt.STATUS_OK
+
+# TODO: Move it to a new file
 #  Manage Name resolutions
 class DNSUpdater(Thread):
-    def __init__(self,table,comm=None, wait=1):
+    def __init__(self,table = {}, comm=None, wait=1):
         self.table = table
         self.comm = comm
         self.wait = wait * 60
@@ -250,6 +308,7 @@ class DNSUpdater(Thread):
     def run(self):
         if self.comm is None:
             raise AttributeError, "comm must not be None"
+
         while not self.__stop:
             if self.__t_last - time() < 0:
                 for name in self.table.keys():
@@ -287,3 +346,7 @@ class DNSUpdater(Thread):
         for name,data in self.table.items():
             entries[name] = data[0]
         return entries
+
+    def clear(self):
+        self.table = {}
+        return True

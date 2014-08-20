@@ -14,9 +14,19 @@ class ControllerTest(unittest.TestCase):
 
     def test_add_iface(self):      # Requires sudo
         self.ctrlr.add_iface('lo')
-        self.assertEqual(len(self.ctrlr.pipe_net), 1)
         self.assertEqual(len(self.ctrlr.ifaces), 1)
-        self.assertEqual(len(self.ctrlr.net_procs), 1)
+        self.assertTrue(self.ctrlr.ifaces.has_key('lo'))
+        self.assertTrue(self.ctrlr.ifaces['lo'].has_key('proc'))
+        self.assertTrue(self.ctrlr.ifaces['lo'].has_key('comm'))
+        self.assertNotEqual(self.ctrlr.ifaces['lo']['comm'], None)
+        self.assertNotEqual(self.ctrlr.ifaces['lo']['proc'], None)
+
+    def test_remove_iface(self):
+        self.test_add_iface()
+        self.assertEqual(self.ctrlr.remove_iface('eth0'), dt.ERR_NO_SUCH_ITEM)
+        self.assertEqual(self.ctrlr.remove_iface('lo'), dt.STATUS_OK)
+        self.assertFalse(self.ctrlr.ifaces.has_key('lo'))
+        self.assertEqual(len(self.ctrlr.ifaces), 0)
 
     def test_add_logger(self):
         self.ctrlr.start()
@@ -130,7 +140,7 @@ class ControllerTest(unittest.TestCase):
             self.assertEqual(res[0], dt.STATUS_OK)
         
         for iface in config['iface']:
-            self.assertTrue(self.ctrlr.add_iface(iface))
+            self.assertEqual(self.ctrlr.add_iface(iface), dt.STATUS_OK)
         
         conf = self.ctrlr.get_config()
         #self.ctrlr.finish()
@@ -167,6 +177,16 @@ class ControllerTest(unittest.TestCase):
         self.assertEqual(logger['name'], 'TextLogger.TEST1')
         self.assertEqual(logger['class'], 'logger.textlogger.TextLogger')
         self.assertEqual(logger['target'], '/tmp/test.log')
+
+    def test_reset(self):
+        self.test_get_config()
+        self.assertEqual(self.ctrlr.reset(), dt.STATUS_OK)
+        config = self.ctrlr.get_config()
+        self.assertEqual(len(config), 3)
+        self.assertEqual(len(config['iface']), 0)
+        self.assertEqual(len(config['filters']), 0)
+        self.assertEqual(len(config['loggers']), 0)
+        self.assertEqual(len(self.ctrlr.dnsmanager.entries()), 0)
         
     def test_resolve_ip(self):
         self.ctrlr.start()
