@@ -260,8 +260,12 @@ class DNSUpdater(Thread):
         self.wait = wait * 60
         self.__t_last = time() + self.wait
         self.__stop = False
-        self.log = open("../logs/dns.log","a")
-
+        try:
+            self.log = open("../logs/dns.log","a")
+        except:
+            syslog(Log.ERR, "Cannot open DNS Log file")
+            self.log = None
+    
         Thread.__init__(self)
 
     def add_target(self,name,target,attr):
@@ -334,10 +338,11 @@ class DNSUpdater(Thread):
     def log_dns(self,name,ip):
         try:
             syslog(Log.DBG,"Resolved {0}:{1}".format(name,ip))
-            sys.stdout.flush()    
-            self.log.write("{0}|{1}|{2}\n".format(strftime("%Y/%m/%d-%X",localtime()),
-                name,ip))
-            self.log.flush()
+            sys.stdout.flush()
+            if self.log is not None:
+                self.log.write("{0}|{1}|{2}\n".format(strftime("%Y/%m/%d-%X",localtime()),
+                    name,ip))
+                self.log.flush()
         except:
             syslog(Log.WARN, "DNSUpdater::Failed to log DNS")    
             

@@ -4,9 +4,11 @@ from util.cfgparser import CfgParser
 from time import sleep
 import signal
 import os
+import sys
 
 CNF = 'config/config2.cfg'
 trapd = None
+fCNF = None  # Modifiable
 
 def main():
     global trapd
@@ -14,7 +16,7 @@ def main():
     trapd = Controller()
     trapd.start()
     
-    load_config(CNF, trapd)
+    load_config(fCNF, trapd)
     signal.signal(signal.SIGHUP, sighup_handler)
     fpid = open('controller.pid','w')
     fpid.write(str(os.getpid()))
@@ -57,7 +59,13 @@ def load_config(cnf, ctrlr):
 def sighup_handler(signum, frame):
     print "Clearing old configurations..."
     trapd.reset()
-    load_config(CNF, trapd)
+    load_config(fCNF, trapd)
 
 if __name__ == "__main__":
+    global fCNF
+    if len(sys.argv) > 1:
+        fCNF = sys.argv[1]
+    else:
+        fCNF = CNF
+
     main()
