@@ -29,6 +29,7 @@ class CfgParserTest(unittest.TestCase):
         self.assertEqual(filter0['class'], 'filter.ipfilter.IPFilter')
         self.assertEqual(filter0['dst'], 'www.google.co.in')
         self.assertEqual(filter0['both'], 'True')
+        self.assertEqual(filter0['inverse'], 'false')
         self.assertNotEqual(filter0['next'], None)
 
         childf0 = filter0['next']
@@ -46,6 +47,7 @@ class CfgParserTest(unittest.TestCase):
         self.assertEqual(filter1['class'], 'filter.ipfilter.IPFilter')
         self.assertEqual(filter1['src'], 'stackoverflow.com')
         self.assertEqual(filter1['both'], 'true')
+        self.assertEqual(filter1['inverse'], 'True')
         with self.assertRaises(KeyError):
             nxt = filter1['next']
 

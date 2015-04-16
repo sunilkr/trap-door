@@ -46,7 +46,8 @@ class FilterManagerTest(unittest.TestCase):
                     'class':'filter.portfilter.UDPFilter',
                     'name':'UDPFilter.CHILD',
                     'sport':'53',
-                    'both':'true'
+                    'both':'true',
+                    'inverse': 'true'
                     }
                 }
         self.fm._new_chain(config)
@@ -60,7 +61,8 @@ class FilterManagerTest(unittest.TestCase):
 
         self.assertNotEqual(child, None)
         self.assertEqual(child.name, 'UDPFilter.CHILD')
-       
+        self.assertTrue(child.inverse)
+
     def test_new_chain_2(self):
         self.test_new_chain()
         config={'class':'filter.ipfilter.IPFilter',

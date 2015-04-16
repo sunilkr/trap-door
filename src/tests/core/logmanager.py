@@ -63,7 +63,8 @@ class LogManagerTest(unittest.TestCase):
                     'name':'IPFilter.TEST',
                     'class':'filter.ipfilter.IPFilter',
                     'src':'127.0.0.1',
-                    'both':'true'
+                    'both':'true',
+                    'inverse': 'true'
                     }
                 }
         status = self.lm._set_filter(config)
@@ -72,6 +73,7 @@ class LogManagerTest(unittest.TestCase):
         _filter = self.lm.loggers['PCAPLogger.TEST'].get_filter()
         self.assertTrue(_filter.both)
         self.assertEqual(_filter.src, '\x7f\x00\x00\x01')
+        self.assertTrue(_filter.inverse)
         
     def test_add_with_filter_chain(self):
         config={'name':'PCAPLogger.TEST',
@@ -81,6 +83,7 @@ class LogManagerTest(unittest.TestCase):
                     'name':'IPFilter.TEST',
                     'class':'filter.ipfilter.IPFilter',
                     'src':'127.0.0.1',
+                    'inverse': 'true',
                     'next':{
                         'name':'TCPFilter.TEST',
                         'class':'filter.portfilter.TCPFilter',
@@ -97,6 +100,7 @@ class LogManagerTest(unittest.TestCase):
         _filter = self.lm.loggers['PCAPLogger.TEST'].get_filter()
         self.assertNotEqual(_filter.nxt, None)
         self.assertEqual(_filter.src,'\x7f\x00\x00\x01')
+        self.assertTrue(_filter.inverse)
         self.assertEqual(_filter.__class__.__name__, 'IPFilter')
         self.assertEqual(_filter.nxt.__class__.__name__, 'TCPFilter')
         self.assertEqual(_filter.nxt.sport, 80)
@@ -113,7 +117,8 @@ class LogManagerTest(unittest.TestCase):
                         'name':'TCPFilter.TEST',
                         'class':'filter.portfilter.TCPFilter',
                         'sport':'80',
-                        'both':'true'
+                        'both':'true',
+                        'inverse' : 'true' 
                         }
                     }
                 },
@@ -140,6 +145,7 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(fltr['name'], cfltr['name'])
         self.assertEqual(fltr['class'], cfltr['class'])
         self.assertEqual(fltr['next']['class'], cfltr['next']['class'])
+        self.assertEqual(fltr['next']['inverse'].lower(), 'true')
 
         logger = attrs[0]
         self.assertEqual(logger['name'], config[1]['name'])

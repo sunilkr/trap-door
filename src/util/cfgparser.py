@@ -77,7 +77,7 @@ class CfgParser(object):
 
     def _enflat(self, key, value, parent):
         if isinstance(value, dict):
-            if not self.parser.has_option(parent, key): #if it has, it was parent was 'list'
+            if not self.parser.has_option(parent, key): #if it has, it parent was 'list'
                 self.parser.set(parent, key, value['name'])
 
             self.parser.add_section(value['name'])

@@ -8,16 +8,19 @@ from struct import pack, unpack
 
 class PortFilter(AbstractFilter):
 
-    def __init__(self, name=None, sport=None, dport=None,  both = False, _next=None):
+    def __init__(self, name=None, sport=None, dport=None,  both = False, inverse=False ,_next=None):
         self.sport = pack("!H",int(sport)) if sport else None
         self.dport = pack("!H",int(dport)) if dport else None
         self.both = both
+        self.inverse = False
         super(PortFilter, self).__init__(name,_next)
 
     def __setattr__(self,name,value):
         if name in ['sport','dport']:
             value = int(value) if value else None
         elif name == 'both':
+            value = to_bool(value) if value else False
+        elif name == 'inverse':
             value = to_bool(value) if value else False
 
         super(PortFilter,self).__setattr__(name,value)
@@ -36,7 +39,7 @@ class PortFilter(AbstractFilter):
         else:
              result +=1
 
-        return (result > 1)
+        return (result > 1) ^ self.inverse
 
     def execute(self,packet):
         return super(PortFilter,self).execute(packet)
@@ -49,11 +52,12 @@ class PortFilter(AbstractFilter):
             config['dport'] = str(self.dport)
         
         config['both'] = str(self.both)
+        config['inverse'] = str(self.inverse)
         return config
 
 class TCPFilter(PortFilter):
 
-    def __init__(self, name=None, sport=None, dport=None, flags=None, both=False, _next=None):
+    def __init__(self, name=None, sport=None, dport=None, flags=None, both=False, inverse=False, _next=None):
         self.flags = tcp_flags_to_value(flags) if flags else None
         super(TCPFilter,self).__init__(name, sport, dport, both, _next)
 
@@ -63,7 +67,7 @@ class TCPFilter(PortFilter):
 
         super(TCPFilter, self).__setattr__(name,value)
 
-    def execute(self,packet):
+    def execute(self,packet): #FIXME: Might have some edge cases
         ethpkt = Ethernet(packet[1])
 
         if hasattr(ethpkt,'ip'):
@@ -80,7 +84,7 @@ class TCPFilter(PortFilter):
 
         #Check Flags: Supprted: FLAG1|FLAG2|..., Not Supported: FLAG1&FLAG2&...
         if self.flags is not None and (tcppkt.flags & self.flags) == 0:
-            return False
+            return False ^ self.inverse
 
         return (super(TCPFilter,self).match(tcppkt) and super(TCPFilter,self).execute(packet))
 

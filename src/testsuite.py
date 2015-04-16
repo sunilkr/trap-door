@@ -28,6 +28,6 @@ suite.addTest(loader.loadTestsFromTestCase(UDPFilterTest))
 suite.addTest(loader.loadTestsFromTestCase(PcapLoggerTest))
 suite.addTest(loader.loadTestsFromTestCase(TextLoggerTest))
 
-runner = TextTestRunner(verbosity=1)
+runner = TextTestRunner(verbosity=2)
 runner.run(suite)
 
