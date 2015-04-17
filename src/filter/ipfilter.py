@@ -38,9 +38,11 @@ class IPFilter(AbstractFilter):
                     result +=1
             else:
                 result +=1
-        
-        final =  ((result > 1) and super(IPFilter,self).execute(packet))
-        return final ^ self.inverse
+       
+        matched = (result > 1)
+        final = matched ^ self.inverse
+        final = final and super(IPFilter,self).execute(packet)
+        return final
 
     def attribs(self):
         return "name:%s, src:%s, dst:%s, both:%s, inverse:%s" %(self.name,

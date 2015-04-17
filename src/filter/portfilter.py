@@ -84,7 +84,7 @@ class TCPFilter(PortFilter):
 
         #Check Flags: Supprted: FLAG1|FLAG2|..., Not Supported: FLAG1&FLAG2&...
         if self.flags is not None and (tcppkt.flags & self.flags) == 0:
-            return False ^ self.inverse
+            return False ^ self.inverse     #FIXME: Inverse filter with flags and next??
 
         return (super(TCPFilter,self).match(tcppkt) and super(TCPFilter,self).execute(packet))
 
